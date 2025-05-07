@@ -392,6 +392,14 @@ const SalesTable: React.FC<SalesTableProps> = ({ data, isLoading }) => {
     </TableRow>
   );
 
+  const handleGroupChange = (value: string) => {
+    // Fix the type issue by ensuring the value is treated as a string or empty string
+    setGroupBy(value as keyof SalesItem | '');
+    if (value) {
+      setViewMode('grouped');
+    }
+  };
+
   return (
     <div className="w-full rounded-xl overflow-hidden">
       <div className="p-4 bg-white border-b border-gray-200 flex flex-wrap items-center justify-between gap-4">
@@ -467,18 +475,13 @@ const SalesTable: React.FC<SalesTableProps> = ({ data, isLoading }) => {
           {/* Group By Dropdown */}
           <Select 
             value={groupBy} 
-            onValueChange={(value) => {
-              setGroupBy(value as keyof SalesItem | '');
-              if (value) {
-                setViewMode('grouped');
-              }
-            }}
+            onValueChange={handleGroupChange}
           >
             <SelectTrigger className="w-[130px] h-9 text-xs">
               <SelectValue placeholder="Group by..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">No grouping</SelectItem>
+              <SelectItem value="none">No grouping</SelectItem>
               <SelectItem value="Cleaned Category">Category</SelectItem>
               <SelectItem value="Cleaned Product">Product</SelectItem>
               <SelectItem value="Calculated Location">Location</SelectItem>
