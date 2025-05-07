@@ -20,7 +20,7 @@ class SheetService {
 
   private readonly CLIENT_ID = "416630995185-007ermh3iidknbbtdmu5vct207mdlbaa.apps.googleusercontent.com";
   private readonly CLIENT_SECRET = "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";
-  private readonly SPREADSHEET_ID = "1dQMNF69WnXVQdhlLvUZTig3kL97NA21k6eZ9HRu6xiQ";
+  private readonly SPREADSHEET_ID = "1GY78saGWgQLnuHeM3zwG01ahZ_2t0Y-WhNS2sz0PK4Q";
   private readonly SHEET_NAME = "◉ Sales";
 
   async refreshAccessToken(): Promise<void> {
