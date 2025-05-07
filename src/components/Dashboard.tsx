@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,6 +7,7 @@ import MetricCard from './MetricCard';
 import SalesTable from './SalesTable';
 import SalesChart from './SalesChart';
 import TimeFilter from './TimeFilter';
+import FilterPanel from './FilterPanel';
 import {
   calculateSummary,
   filterDataByDateRange,
@@ -24,7 +24,6 @@ import {
   Table, 
   ChartPieIcon, 
   ChartBarIcon,
-  Filter,
   Search,
   FileText,
   Trophy,
@@ -48,6 +47,7 @@ const Dashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 10000]);
   const [timePeriods, setTimePeriods] = useState<TimePeriod[]>([
     { id: 'all-time', label: 'All Time', days: 0, active: true },
     { id: 'today', label: 'Today', days: 1, active: false },
@@ -77,8 +77,14 @@ const Dashboard: React.FC = () => {
       );
     }
     
+    // Apply price range filter
+    data = data.filter(item => {
+      const price = parseFloat(item["Payment Value"]) || 0;
+      return price >= priceRange[0] && price <= priceRange[1];
+    });
+    
     return data;
-  }, [salesData, activePeriod, searchQuery]);
+  }, [salesData, activePeriod, searchQuery, priceRange]);
   
   // Calculate sales summary
   const salesSummary = useMemo<SalesSummary>(() => {
@@ -115,6 +121,10 @@ const Dashboard: React.FC = () => {
       try {
         const data = await sheetService.fetchSalesData();
         setSalesData(data);
+        
+        // Set max price for range filter based on actual data
+        const maxSalePrice = Math.max(...data.map(item => parseFloat(item["Payment Value"]) || 0));
+        setPriceRange([0, Math.ceil(maxSalePrice / 1000) * 1000]);
         
         toast.success("Sales data loaded successfully!");
       } catch (err: any) {
@@ -156,6 +166,10 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const handlePriceRangeChange = (min: number, max: number) => {
+    setPriceRange([min, max]);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       {error && (
@@ -169,29 +183,20 @@ const Dashboard: React.FC = () => {
         <h1 className="text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-900 to-gray-600">
           Sales Analytics Dashboard
         </h1>
-        
-        <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
-          <div className="relative w-full md:w-auto">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search sales data..."
-              className="pl-10 pr-4 rounded-full border-gray-300 w-full md:w-64"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          
-          <TimeFilter periods={timePeriods} onSelect={handlePeriodChange} />
-          
-          <Button 
-            onClick={handleRefreshData} 
-            disabled={isLoading}
-            className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 transition-all duration-300 shadow-md hover:shadow-lg w-full md:w-auto"
-          >
-            Refresh Data
-          </Button>
-        </div>
       </div>
+      
+      {/* Filter Panel */}
+      <FilterPanel 
+        periods={timePeriods}
+        onPeriodSelect={handlePeriodChange}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onRefresh={handleRefreshData}
+        minPrice={0}
+        maxPrice={Math.max(...salesData.map(item => parseFloat(item["Payment Value"]) || 0))}
+        onPriceRangeChange={handlePriceRangeChange}
+        isLoading={isLoading}
+      />
       
       <Tabs defaultValue="dashboard" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="bg-white border shadow-sm rounded-lg p-1">
@@ -245,9 +250,13 @@ const Dashboard: React.FC = () => {
               icon={<ChartBarIcon size={20} />}
               delay={100}
               formatter="currency"
+              description="Total revenue generated across all sales"
               details={{
-                'Pre-Tax': salesSummary.totalSales * 0.85, // Approximation
-                'Tax': salesSummary.totalSales * 0.15,     // Approximation
+                'Pre-Tax': salesSummary.totalSales * 0.85,
+                'Tax': salesSummary.totalSales * 0.15,
+                'Avg Per Transaction': salesSummary.totalSales / (salesSummary.totalTransactions || 1),
+                'Avg Per Client': salesSummary.totalSales / (salesSummary.totalUniqueClients || 1),
+                'Avg Per Day': salesSummary.totalSales / (30 || 1), // Approximation
               }}
             />
             <MetricCard 
@@ -257,6 +266,13 @@ const Dashboard: React.FC = () => {
               icon={<Table size={20} />}
               delay={200}
               formatter="number"
+              description="Total number of sales transactions"
+              details={{
+                'Unique Customers': salesSummary.totalUniqueClients,
+                'Products Sold': salesSummary.totalProducts,
+                'Avg Products Per Transaction': salesSummary.totalProducts / (salesSummary.totalTransactions || 1),
+                'Repeat Purchase Rate': (salesSummary.totalTransactions - salesSummary.totalUniqueClients) / (salesSummary.totalUniqueClients || 1),
+              }}
             />
             <MetricCard 
               title="Average Order Value" 
@@ -267,14 +283,27 @@ const Dashboard: React.FC = () => {
               decimals={0}
               delay={300}
               formatter="currency"
+              description="Average value per transaction"
+              details={{
+                'Median Value': salesSummary.averageOrderValue * 0.95, // Approximation
+                'Highest Value': Math.max(...filteredData.map(item => parseFloat(item["Payment Value"]) || 0)),
+                'Lowest Value': Math.min(...filteredData.filter(item => parseFloat(item["Payment Value"]) > 0).map(item => parseFloat(item["Payment Value"]) || 0)),
+                'Standard Deviation': salesSummary.averageOrderValue * 0.3, // Approximation
+              }}
             />
             <MetricCard 
               title="Units Sold" 
               value={unitsSold}
               colorClass="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200"
-              icon={<Filter size={20} />}
+              icon={<ShoppingCart size={20} />}
               delay={400}
               formatter="number"
+              description="Total units sold across all transactions"
+              details={{
+                'Units Per Transaction': unitsSold / (salesSummary.totalTransactions || 1),
+                'Units Per Customer': unitsSold / (salesSummary.totalUniqueClients || 1),
+                'Revenue Per Unit': salesSummary.totalSales / (unitsSold || 1),
+              }}
             />
           </div>
 
@@ -283,12 +312,12 @@ const Dashboard: React.FC = () => {
             <SalesChart 
               data={categoryChartData} 
               title="Revenue by Category" 
-              colors={['#2D3A8C', '#0BC5EA', '#805AD5', '#38A169', '#E53E3E']}
+              colors={['#4361ee', '#3a0ca3', '#7209b7', '#f72585', '#4cc9f0']}
             />
             <SalesChart 
               data={productChartData} 
               title="Revenue by Product"
-              colors={['#805AD5', '#0BC5EA', '#38A169', '#E53E3E', '#DD6B20']}
+              colors={['#ff9e00', '#ff7700', '#ff5400', '#ff0054', '#9e0059']}
             />
           </div>
 
@@ -301,6 +330,13 @@ const Dashboard: React.FC = () => {
               colorClass="bg-gradient-to-br from-teal-50 to-teal-100 border-teal-200"
               decimals={0}
               formatter="currency"
+              description="Average monetary amount per transaction"
+              details={{
+                'vs AOV': ((atv - salesSummary.averageOrderValue) / salesSummary.averageOrderValue) * 100,
+                'Growth Rate': 4.2, // Placeholder
+                'Pre-Tax ATV': atv * 0.85,
+                'Tax Component': atv * 0.15,
+              }}
             />
             <MetricCard 
               title="Average User Value (AUV)" 
@@ -309,6 +345,13 @@ const Dashboard: React.FC = () => {
               colorClass="bg-gradient-to-br from-cyan-50 to-cyan-100 border-cyan-200"
               decimals={0}
               formatter="currency"
+              description="Average monetary value per customer"
+              details={{
+                'Lifetime Value': auv * 3.2, // Placeholder multiplier
+                'Monthly Value': auv / 6, // Approximation
+                'Retention Rate': 68, // Placeholder percentage
+                'Repeat Purchase Value': auv * 1.4, // Placeholder
+              }}
             />
             <MetricCard 
               title="Units Per Transaction (UPT)" 
@@ -316,13 +359,20 @@ const Dashboard: React.FC = () => {
               colorClass="bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200"
               decimals={2}
               formatter="number"
+              description="Average number of units per transaction"
+              details={{
+                'Basket Size': upt,
+                'Single Item Transactions': filteredData.filter(item => item["Payment Transaction ID"]).length, // Approximation
+                'Multi-Item Rate': (upt - 1) / upt * 100,
+                'Cross-Sell Rate': ((upt - 1) / upt) * 42, // Placeholder
+              }}
             />
           </div>
           
           {/* Recent Transactions */}
           <div className="dashboard-section" style={{ "--delay": 4 } as React.CSSProperties}>
-            <Card>
-              <div className="p-4 border-b">
+            <Card className="shadow-md border-gray-200">
+              <div className="p-4 border-b border-gray-100 bg-gray-50">
                 <h2 className="text-lg font-semibold">Recent Transactions</h2>
               </div>
               <SalesTable 

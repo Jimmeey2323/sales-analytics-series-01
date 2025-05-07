@@ -16,7 +16,7 @@ const CounterAnimation: React.FC<CounterAnimationProps> = ({
   prefix = '',
   suffix = '',
   decimals = 0,
-  duration = 1000,
+  duration = 1500,
   formatter
 }) => {
   const [count, setCount] = useState(0);
@@ -27,11 +27,18 @@ const CounterAnimation: React.FC<CounterAnimationProps> = ({
     const startValue = 0;
     const endValue = value;
     
+    // Use easeOutExpo for more natural animation
+    const easeOutExpo = (t: number): number => {
+      return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+    };
+    
     const updateCount = (timestamp: number) => {
       if (!startTime) startTime = timestamp;
       
-      const progress = Math.min((timestamp - startTime) / duration, 1);
-      const currentCount = startValue + progress * (endValue - startValue);
+      const elapsed = timestamp - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const easedProgress = easeOutExpo(progress);
+      const currentCount = startValue + easedProgress * (endValue - startValue);
       
       setCount(currentCount);
       
@@ -53,7 +60,7 @@ const CounterAnimation: React.FC<CounterAnimationProps> = ({
     : `${prefix}${count.toFixed(decimals)}${suffix}`;
   
   return (
-    <div className="counter-animation">
+    <div className="counter-animation font-mono font-medium">
       {displayValue}
     </div>
   );
