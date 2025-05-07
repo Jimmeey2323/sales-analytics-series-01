@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -6,7 +7,6 @@ import sheetService from '@/services/sheetService';
 import MetricCard from './MetricCard';
 import SalesTable from './SalesTable';
 import SalesChart from './SalesChart';
-import TimeFilter from './TimeFilter';
 import FilterPanel from './FilterPanel';
 import {
   calculateSummary,
@@ -39,8 +39,8 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import CategoryAnalysis from './CategoryAnalysis';
 import ExecutiveSummary from './ExecutiveSummary';
 import TopPerformers from './TopPerformers';
-import { Input } from '@/components/ui/input';
 
+// Fixed the warning with the conditional statement
 const Dashboard: React.FC = () => {
   const [salesData, setSalesData] = useState<SalesItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -55,6 +55,7 @@ const Dashboard: React.FC = () => {
     { id: 'this-month', label: 'This Month', days: 30, active: false },
     { id: 'this-quarter', label: 'This Quarter', days: 90, active: false }
   ]);
+  const [filters, setFilters] = useState<Record<string, any>>({});
   
   const activePeriod = timePeriods.find(p => p.active) || timePeriods[0];
   
@@ -82,9 +83,45 @@ const Dashboard: React.FC = () => {
       const price = parseFloat(item["Payment Value"]) || 0;
       return price >= priceRange[0] && price <= priceRange[1];
     });
+
+    // Apply location filter
+    if (filters.locations?.length > 0) {
+      data = data.filter(item => filters.locations.includes(item["Calculated Location"]));
+    }
+
+    // Apply product filter
+    if (filters.products?.length > 0) {
+      data = data.filter(item => filters.products.includes(item["Cleaned Product"]));
+    }
+
+    // Apply category filter
+    if (filters.categories?.length > 0) {
+      data = data.filter(item => filters.categories.includes(item["Cleaned Category"]));
+    }
+
+    // Apply seller filter
+    if (filters.sellers?.length > 0) {
+      data = data.filter(item => filters.sellers.includes(item["Sold By"]));
+    }
+
+    // Apply payment method filter
+    if (filters.paymentMethods?.length > 0) {
+      data = data.filter(item => filters.paymentMethods.includes(item["Payment Method"]));
+    }
+
+    // Apply date range filter if set
+    if (filters.dateRange?.start && filters.dateRange?.end) {
+      data = data.filter(item => {
+        const itemDate = new Date(item["Payment Date"]);
+        return (
+          itemDate >= filters.dateRange.start &&
+          itemDate <= filters.dateRange.end
+        );
+      });
+    }
     
     return data;
-  }, [salesData, activePeriod, searchQuery, priceRange]);
+  }, [salesData, activePeriod, searchQuery, priceRange, filters]);
   
   // Calculate sales summary
   const salesSummary = useMemo<SalesSummary>(() => {
@@ -111,6 +148,10 @@ const Dashboard: React.FC = () => {
   
   const locationChartData = useMemo<ChartData[]>(() => {
     return getTopItems(convertToChartData(salesSummary.salesByLocation));
+  }, [salesSummary]);
+
+  const associateChartData = useMemo<ChartData[]>(() => {
+    return getTopItems(convertToChartData(salesSummary.salesByAssociate));
   }, [salesSummary]);
 
   useEffect(() => {
@@ -170,6 +211,10 @@ const Dashboard: React.FC = () => {
     setPriceRange([min, max]);
   };
 
+  const handleFilterChange = (newFilters: Record<string, any>) => {
+    setFilters(newFilters);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       {error && (
@@ -196,6 +241,9 @@ const Dashboard: React.FC = () => {
         maxPrice={Math.max(...salesData.map(item => parseFloat(item["Payment Value"]) || 0))}
         onPriceRangeChange={handlePriceRangeChange}
         isLoading={isLoading}
+        salesData={salesData}
+        filters={filters}
+        onFilterChange={handleFilterChange}
       />
       
       <Tabs defaultValue="dashboard" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -241,13 +289,13 @@ const Dashboard: React.FC = () => {
         {/* Dashboard Tab */}
         <TabsContent value="dashboard" className="m-0">
           {/* Key Metrics Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 dashboard-section" style={{ "--delay": 1 } as React.CSSProperties}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 dashboard-section animate-fade-in" style={{ "--delay": 1 } as React.CSSProperties}>
             <MetricCard 
               title="Total Revenue" 
               value={salesSummary.totalSales}
               prefix="₹"
               colorClass="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200"
-              icon={<ChartBarIcon size={20} />}
+              icon={<ChartBarIcon size={20} className="text-blue-600" />}
               delay={100}
               formatter="currency"
               description="Total revenue generated across all sales"
@@ -256,14 +304,15 @@ const Dashboard: React.FC = () => {
                 'Tax': salesSummary.totalSales * 0.15,
                 'Avg Per Transaction': salesSummary.totalSales / (salesSummary.totalTransactions || 1),
                 'Avg Per Client': salesSummary.totalSales / (salesSummary.totalUniqueClients || 1),
-                'Avg Per Day': salesSummary.totalSales / (30 || 1), // Approximation
+                'Avg Per Day': salesSummary.totalSales / (30 || 1) // Approximation
               }}
+              chartData={productChartData}
             />
             <MetricCard 
               title="Transactions" 
               value={salesSummary.totalTransactions}
               colorClass="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200"
-              icon={<Table size={20} />}
+              icon={<Table size={20} className="text-purple-600" />}
               delay={200}
               formatter="number"
               description="Total number of sales transactions"
@@ -279,7 +328,7 @@ const Dashboard: React.FC = () => {
               value={salesSummary.averageOrderValue}
               prefix="₹"
               colorClass="bg-gradient-to-br from-green-50 to-green-100 border-green-200"
-              icon={<ChartPieIcon size={20} />}
+              icon={<ChartPieIcon size={20} className="text-green-600" />}
               decimals={0}
               delay={300}
               formatter="currency"
@@ -295,7 +344,7 @@ const Dashboard: React.FC = () => {
               title="Units Sold" 
               value={unitsSold}
               colorClass="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200"
-              icon={<ShoppingCart size={20} />}
+              icon={<ShoppingCart size={20} className="text-orange-600" />}
               delay={400}
               formatter="number"
               description="Total units sold across all transactions"
@@ -308,21 +357,23 @@ const Dashboard: React.FC = () => {
           </div>
 
           {/* Chart Sections */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 dashboard-section" style={{ "--delay": 2 } as React.CSSProperties}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 dashboard-section animate-fade-in" style={{ "--delay": 2 } as React.CSSProperties}>
             <SalesChart 
               data={categoryChartData} 
               title="Revenue by Category" 
               colors={['#4361ee', '#3a0ca3', '#7209b7', '#f72585', '#4cc9f0']}
+              description="Distribution of revenue across product categories"
             />
             <SalesChart 
               data={productChartData} 
               title="Revenue by Product"
               colors={['#ff9e00', '#ff7700', '#ff5400', '#ff0054', '#9e0059']}
+              description="Top products by revenue contribution"
             />
           </div>
 
           {/* Advanced Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 dashboard-section" style={{ "--delay": 3 } as React.CSSProperties}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 dashboard-section animate-fade-in" style={{ "--delay": 3 } as React.CSSProperties}>
             <MetricCard 
               title="Average Transaction Value (ATV)" 
               value={atv}
@@ -369,8 +420,24 @@ const Dashboard: React.FC = () => {
             />
           </div>
           
+          {/* Additional Chart Sections */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 dashboard-section animate-fade-in" style={{ "--delay": 4 } as React.CSSProperties}>
+            <SalesChart 
+              data={locationChartData} 
+              title="Revenue by Location" 
+              colors={['#2c699a', '#048ba8', '#0db39e', '#16db93', '#83e377']}
+              description="Geographic distribution of sales revenue"
+            />
+            <SalesChart 
+              data={associateChartData} 
+              title="Revenue by Sales Associate"
+              colors={['#A47FFA', '#8952FA', '#7028FA', '#5D05FA', '#4500BD']}
+              description="Performance breakdown by sales team members"
+            />
+          </div>
+          
           {/* Recent Transactions */}
-          <div className="dashboard-section" style={{ "--delay": 4 } as React.CSSProperties}>
+          <div className="dashboard-section animate-fade-in" style={{ "--delay": 5 } as React.CSSProperties}>
             <Card className="shadow-md border-gray-200">
               <div className="p-4 border-b border-gray-100 bg-gray-50">
                 <h2 className="text-lg font-semibold">Recent Transactions</h2>
