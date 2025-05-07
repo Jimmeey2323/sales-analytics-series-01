@@ -1,6 +1,4 @@
 
-"use client"
-
 import * as React from "react"
 import * as SelectPrimitive from "@radix-ui/react-select"
 import { Check, ChevronDown, ChevronUp } from "lucide-react"
@@ -116,10 +114,10 @@ const SelectItem = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
 >(({ className, children, ...props }, ref) => {
-  // Make sure the value is never an empty string
+  // Ensure value is not empty string - critical fix
   if (props.value === '') {
-    console.warn('SelectItem received empty string value, using "none" instead');
-    props.value = 'none';
+    console.warn('SelectItem received empty string value, using fallback value')
+    props.value = 'fallback-value'
   }
   
   return (
