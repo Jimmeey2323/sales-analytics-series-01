@@ -95,7 +95,7 @@ class SheetService {
 
       // Convert to array of objects with headers as keys
       const headers = result.values[0];
-      return result.values.slice(1).map((row: any) => {
+      const data = result.values.slice(1).map((row: any) => {
         const item: Record<string, any> = {};
         headers.forEach((header: string, index: number) => {
           item[header] = row[index] || "";
@@ -103,10 +103,88 @@ class SheetService {
         return item;
       });
       
+      // Add additional computed fields for analysis
+      return data.map((item: any) => {
+        // Extract month and year for month-on-month analysis
+        const date = this.parseDate(item["Payment Date"]);
+        if (date) {
+          item["Month"] = date.getMonth() + 1;
+          item["Year"] = date.getFullYear();
+          item["MonthYear"] = `${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}`;
+        }
+        
+        // Calculate tax amount if not available
+        if (item["Payment VAT"] && !isNaN(parseFloat(item["Payment VAT"]))) {
+          item["Tax Amount"] = parseFloat(item["Payment VAT"]);
+        } else if (item["Payment Value"]) {
+          // Assume tax is 18% if not provided
+          const value = parseFloat(item["Payment Value"]) || 0;
+          item["Tax Amount"] = value * 0.18;
+        }
+        
+        // Calculate post-tax revenue
+        const value = parseFloat(item["Payment Value"]) || 0;
+        const tax = parseFloat(item["Tax Amount"]) || 0;
+        item["Revenue Post Tax"] = value;
+        item["Revenue Pre Tax"] = value - tax;
+        
+        // Identify the sales associate
+        item["Sales Associate"] = item["Sold By"] || "Unknown";
+        
+        return item;
+      });
+      
     } catch (error) {
       console.error("Error fetching sales data:", error);
       throw error;
     }
+  }
+
+  private parseDate(dateString: string): Date | null {
+    if (!dateString) return null;
+    
+    // Try different date formats
+    // Format: DD/MM/YYYY HH:mm:ss
+    const formats = [
+      /(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/,  // DD/MM/YYYY HH:mm:ss
+      /(\d{2})\/(\d{2})\/(\d{4})/,  // DD/MM/YYYY
+      /(\d{4})-(\d{2})-(\d{2})/     // YYYY-MM-DD
+    ];
+    
+    for (const format of formats) {
+      const match = dateString.match(format);
+      if (match) {
+        if (match.length === 7) {
+          // DD/MM/YYYY HH:mm:ss
+          return new Date(
+            parseInt(match[3], 10),
+            parseInt(match[2], 10) - 1,
+            parseInt(match[1], 10),
+            parseInt(match[4], 10),
+            parseInt(match[5], 10),
+            parseInt(match[6], 10)
+          );
+        } else if (match.length === 4) {
+          // DD/MM/YYYY
+          return new Date(
+            parseInt(match[3], 10),
+            parseInt(match[2], 10) - 1,
+            parseInt(match[1], 10)
+          );
+        } else if (match.length === 4) {
+          // YYYY-MM-DD
+          return new Date(
+            parseInt(match[1], 10),
+            parseInt(match[2], 10) - 1,
+            parseInt(match[3], 10)
+          );
+        }
+      }
+    }
+    
+    // Last resort, try standard parsing
+    const parsedDate = new Date(dateString);
+    return isNaN(parsedDate.getTime()) ? null : parsedDate;
   }
 }
 

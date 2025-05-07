@@ -19,7 +19,14 @@ export interface SalesItem {
   "Calculated Location": string;
   "Cleaned Product": string;
   "Cleaned Category": string;
-  [key: string]: string;
+  "Month"?: number;
+  "Year"?: number;
+  "MonthYear"?: string;
+  "Tax Amount"?: number;
+  "Revenue Post Tax"?: number;
+  "Revenue Pre Tax"?: number;
+  "Sales Associate"?: string;
+  [key: string]: any;
 }
 
 export interface SalesSummary {
@@ -27,10 +34,13 @@ export interface SalesSummary {
   totalTransactions: number;
   averageOrderValue: number;
   totalProducts: number;
+  totalUniqueClients: number;
   revenueByCategory: Record<string, number>;
   revenueByProduct: Record<string, number>;
   salesByMethod: Record<string, number>;
   salesByLocation: Record<string, number>;
+  salesByAssociate: Record<string, number>;
+  monthlyData: MonthlyData[];
   dateRange: {
     start: Date;
     end: Date;
@@ -54,4 +64,43 @@ export interface FilterOption {
 export interface ChartData {
   name: string;
   value: number;
+}
+
+export interface MonthlyData {
+  monthYear: string;
+  sortKey: string;
+  totalSales: number;
+  totalTax: number;
+  unitsSold: number;
+  transactions: number;
+  uniqueClients: number;
+  preTaxRevenue: number;
+  postTaxRevenue: number;
+  atv: number;
+  auv: number;
+  averageSpend: number;
+}
+
+export interface ViewOption {
+  id: string;
+  label: string;
+  icon?: React.ReactNode;
+}
+
+export interface GroupedTotals {
+  totalRevenue: number;
+  preTaxRevenue: number;
+  taxAmount: number;
+  unitsSold: number;
+  transactions: number;
+  uniqueClients: number;
+  atv: number;
+  auv: number;
+}
+
+export interface PerformanceMetric {
+  key: string;
+  name: string;
+  value: number;
+  trend?: number;
 }

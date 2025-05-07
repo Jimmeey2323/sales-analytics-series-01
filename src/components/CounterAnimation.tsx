@@ -1,88 +1,60 @@
 
 import React, { useState, useEffect } from 'react';
+import { formatCurrency, formatNumber } from '@/utils/salesUtils';
 
 interface CounterAnimationProps {
   value: number;
-  duration?: number;
   prefix?: string;
   suffix?: string;
   decimals?: number;
+  duration?: number;
+  formatter?: (value: number) => string;
 }
 
-const CounterAnimation = ({ 
-  value, 
-  duration = 1000, 
-  prefix = '', 
-  suffix = '', 
-  decimals = 0 
-}: CounterAnimationProps) => {
+const CounterAnimation: React.FC<CounterAnimationProps> = ({
+  value,
+  prefix = '',
+  suffix = '',
+  decimals = 0,
+  duration = 1000,
+  formatter
+}) => {
   const [count, setCount] = useState(0);
-  const [isVisible, setIsVisible] = useState(false);
-
+  
   useEffect(() => {
-    // Setup visibility observer
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    const element = document.getElementById(`counter-${prefix}-${suffix}`);
-    if (element) observer.observe(element);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [prefix, suffix]);
-
-  useEffect(() => {
-    if (!isVisible) return;
-
     let startTime: number;
-    let animationFrame: number;
+    let animationFrameId: number;
+    const startValue = 0;
+    const endValue = value;
     
-    const startAnimation = (timestamp: number) => {
-      startTime = timestamp;
-      updateCount(timestamp);
-    };
-
     const updateCount = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      
       const progress = Math.min((timestamp - startTime) / duration, 1);
-      const currentValue = progress * value;
-      setCount(currentValue);
-
+      const currentCount = startValue + progress * (endValue - startValue);
+      
+      setCount(currentCount);
+      
       if (progress < 1) {
-        animationFrame = requestAnimationFrame(updateCount);
+        animationFrameId = requestAnimationFrame(updateCount);
       }
     };
-
-    animationFrame = requestAnimationFrame(startAnimation);
-
+    
+    animationFrameId = requestAnimationFrame(updateCount);
+    
     return () => {
-      cancelAnimationFrame(animationFrame);
+      cancelAnimationFrame(animationFrameId);
     };
-  }, [value, duration, isVisible]);
-
-  // Format the number (add commas, decimal places)
-  const formatNumber = (num: number): string => {
-    return num.toLocaleString('en-IN', {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals
-    });
-  };
-
+  }, [value, duration]);
+  
+  // Format the displayed value
+  const displayValue = formatter 
+    ? formatter(count) 
+    : `${prefix}${count.toFixed(decimals)}${suffix}`;
+  
   return (
-    <div 
-      id={`counter-${prefix}-${suffix}`} 
-      className="counter-animation overflow-hidden"
-    >
-      <span>{prefix}</span>
-      <span>{formatNumber(count)}</span>
-      <span>{suffix}</span>
+    <div className="counter-animation">
+      {displayValue}
     </div>
   );
 };

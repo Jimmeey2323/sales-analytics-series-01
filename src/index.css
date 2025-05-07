@@ -111,6 +111,8 @@
 
 .metric-card {
   @apply rounded-xl p-4 bg-white shadow-md border border-gray-100 hover:shadow-lg transition-all duration-300;
+  animation: fade-in-up 0.6s ease-out forwards;
+  opacity: 0;
 }
 
 .metric-value {
@@ -130,11 +132,57 @@
 }
 
 .filter-button {
-  @apply px-3 py-1.5 rounded-lg border transition-all duration-200 text-sm font-medium;
+  @apply px-3 py-1.5 rounded-lg border transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md;
 }
 
 .dashboard-section {
   @apply my-6 animate-fade-in opacity-0;
   animation-delay: calc(var(--delay) * 100ms);
   animation-fill-mode: forwards;
+}
+
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Override for tabs component to make it look modern */
+.tabs-list {
+  @apply bg-white border border-gray-100 shadow-sm rounded-lg p-1;
+}
+
+.tab-trigger {
+  @apply rounded-md px-4 py-2 text-sm font-medium text-gray-600 transition-all;
+}
+
+.tab-trigger[data-state="active"] {
+  @apply bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md;
+}
+
+/* Table styling improvements */
+.table-fancy th {
+  @apply bg-gray-50 text-gray-700 text-center;
+}
+
+.table-fancy td {
+  @apply text-center border-b border-gray-100;
+}
+
+.table-fancy tr:hover td {
+  @apply bg-blue-50;
+}
+
+.table-fancy tbody tr:last-child td {
+  @apply border-b-0;
+}
+
+/* Card enhanced styling */
+.enhanced-card {
+  @apply border-0 shadow-xl bg-gradient-to-br from-white to-gray-50 rounded-xl overflow-hidden;
 }
