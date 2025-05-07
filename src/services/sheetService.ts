@@ -188,4 +188,5 @@ class SheetService {
   }
 }
 
-export default new SheetService();
+const sheetService = new SheetService();
+export default sheetService;

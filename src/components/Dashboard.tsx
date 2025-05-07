@@ -8,7 +8,7 @@ import TopPerformers from './TopPerformers';
 import CategoryAnalysis from './CategoryAnalysis';
 import FilterPanel from './FilterPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { fetchSalesData } from '@/services/sheetService';
+import sheetService from '@/services/sheetService';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 
@@ -52,14 +52,14 @@ const Dashboard = () => {
   const [filters, setFilters] = useState<Record<string, any>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [periods, setPeriods] = useState<TimePeriod[]>([
-    { id: 'today', label: 'Today', active: false },
-    { id: 'yesterday', label: 'Yesterday', active: false },
-    { id: 'last7days', label: 'Last 7 Days', active: false },
-    { id: 'last30days', label: 'Last 30 Days', active: true },
-    { id: 'thisMonth', label: 'This Month', active: false },
-    { id: 'lastMonth', label: 'Last Month', active: false },
-    { id: 'thisYear', label: 'This Year', active: false },
-    { id: 'custom', label: 'Custom', active: false }
+    { id: 'today', label: 'Today', days: 1, active: false },
+    { id: 'yesterday', label: 'Yesterday', days: 1, active: false },
+    { id: 'last7days', label: 'Last 7 Days', days: 7, active: false },
+    { id: 'last30days', label: 'Last 30 Days', days: 30, active: true },
+    { id: 'thisMonth', label: 'This Month', days: 30, active: false },
+    { id: 'lastMonth', label: 'Last Month', days: 30, active: false },
+    { id: 'thisYear', label: 'This Year', days: 365, active: false },
+    { id: 'custom', label: 'Custom', days: 0, active: false }
   ]);
 
   // Fetch sales data
@@ -90,7 +90,7 @@ const Dashboard = () => {
     if (!isInitialLoad) setIsLoading(true);
     
     try {
-      const data = await fetchSalesData();
+      const data = await sheetService.fetchSalesData();
       setSalesData(data);
       setFilteredData(data);
       setError(null);
@@ -166,7 +166,24 @@ const Dashboard = () => {
         filters={filters}
       />
       
-      <ExecutiveSummary data={filteredData} isLoading={isLoading} />
+      <ExecutiveSummary salesSummary={{
+        totalSales: filteredData.reduce((sum, item) => sum + parseFloat(item["Payment Value"] || "0"), 0),
+        totalTransactions: filteredData.length,
+        averageOrderValue: filteredData.length > 0 ? 
+          filteredData.reduce((sum, item) => sum + parseFloat(item["Payment Value"] || "0"), 0) / filteredData.length : 0,
+        totalProducts: [...new Set(filteredData.map(item => item["Cleaned Product"]))].length,
+        totalUniqueClients: [...new Set(filteredData.map(item => item["Member ID"]))].length,
+        revenueByCategory: {},
+        revenueByProduct: {},
+        salesByMethod: {},
+        salesByLocation: {},
+        salesByAssociate: {},
+        monthlyData: [],
+        dateRange: {
+          start: new Date(),
+          end: new Date()
+        }
+      }} />
       
       <SalesChart data={filteredData} isLoading={isLoading} />
 
@@ -183,11 +200,33 @@ const Dashboard = () => {
         </TabsContent>
         
         <TabsContent value="top-performers">
-          <TopPerformers data={filteredData} isLoading={isLoading} />
+          <TopPerformers salesData={filteredData} isLoading={isLoading} />
         </TabsContent>
         
         <TabsContent value="categories">
-          <CategoryAnalysis data={filteredData} isLoading={isLoading} />
+          <CategoryAnalysis 
+            salesSummary={{
+              totalSales: filteredData.reduce((sum, item) => sum + parseFloat(item["Payment Value"] || "0"), 0),
+              totalTransactions: filteredData.length,
+              averageOrderValue: filteredData.length > 0 ? 
+                filteredData.reduce((sum, item) => sum + parseFloat(item["Payment Value"] || "0"), 0) / filteredData.length : 0,
+              totalProducts: [...new Set(filteredData.map(item => item["Cleaned Product"]))].length,
+              totalUniqueClients: [...new Set(filteredData.map(item => item["Member ID"]))].length,
+              revenueByCategory: {},
+              revenueByProduct: {},
+              salesByMethod: {},
+              salesByLocation: {},
+              salesByAssociate: {},
+              monthlyData: [],
+              dateRange: {
+                start: new Date(),
+                end: new Date()
+              }
+            }} 
+            salesData={filteredData}
+            fieldKey="Cleaned Category"
+            title="Category"
+          />
         </TabsContent>
         
         <TabsContent value="monthly">

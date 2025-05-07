@@ -393,9 +393,13 @@ const SalesTable: React.FC<SalesTableProps> = ({ data, isLoading }) => {
   );
 
   const handleGroupChange = (value: string) => {
-    // Fix the type issue by ensuring the value is treated as a string or empty string
-    setGroupBy(value as keyof SalesItem | '');
-    if (value) {
+    if (value === 'none' || value === '') {
+      setGroupBy('');
+      if (viewMode === 'grouped') {
+        setViewMode('default');
+      }
+    } else {
+      setGroupBy(value as keyof SalesItem);
       setViewMode('grouped');
     }
   };
