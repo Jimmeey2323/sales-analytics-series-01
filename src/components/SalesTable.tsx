@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { SalesItem } from '../types/sales';
 import { Button } from '@/components/ui/button';
@@ -127,9 +126,9 @@ const SalesTable: React.FC<SalesTableProps> = ({ data, isLoading }) => {
       
       // Default string comparison
       if (sortConfig.direction === 'asc') {
-        return (keyA || '').localeCompare(keyB || '');
+        return (keyA || '').toString().localeCompare((keyB || '').toString());
       }
-      return (keyB || '').localeCompare(keyA || '');
+      return (keyB || '').toString().localeCompare((keyA || '').toString());
     });
   }, [filteredData, sortConfig]);
 

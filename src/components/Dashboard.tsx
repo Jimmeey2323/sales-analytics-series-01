@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -67,20 +66,20 @@ const Dashboard: React.FC = () => {
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
       data = data.filter(item => 
-        item["Customer Name"]?.toLowerCase().includes(query) || 
-        item["Customer Email"]?.toLowerCase().includes(query) ||
-        item["Payment Item"]?.toLowerCase().includes(query) ||
-        item["Calculated Location"]?.toLowerCase().includes(query) ||
-        item["Cleaned Product"]?.toLowerCase().includes(query) ||
-        item["Payment Transaction ID"]?.toLowerCase().includes(query) ||
-        item["Cleaned Category"]?.toLowerCase().includes(query) ||
-        item["Sold By"]?.toLowerCase().includes(query)
+        (item["Customer Name"]?.toLowerCase().includes(query) || false) || 
+        (item["Customer Email"]?.toLowerCase().includes(query) || false) ||
+        (item["Payment Item"]?.toLowerCase().includes(query) || false) ||
+        (item["Calculated Location"]?.toLowerCase().includes(query) || false) ||
+        (item["Cleaned Product"]?.toLowerCase().includes(query) || false) ||
+        (item["Payment Transaction ID"]?.toLowerCase().includes(query) || false) ||
+        (item["Cleaned Category"]?.toLowerCase().includes(query) || false) ||
+        (item["Sold By"]?.toLowerCase().includes(query) || false)
       );
     }
     
     // Apply price range filter
     data = data.filter(item => {
-      const price = parseFloat(item["Payment Value"]) || 0;
+      const price = parseFloat(item["Payment Value"] || '0');
       return price >= priceRange[0] && price <= priceRange[1];
     });
 
@@ -164,7 +163,7 @@ const Dashboard: React.FC = () => {
         setSalesData(data);
         
         // Set max price for range filter based on actual data
-        const maxSalePrice = Math.max(...data.map(item => parseFloat(item["Payment Value"]) || 0));
+        const maxSalePrice = Math.max(...data.map(item => parseFloat(item["Payment Value"] || '0')));
         setPriceRange([0, Math.ceil(maxSalePrice / 1000) * 1000]);
         
         toast.success("Sales data loaded successfully!");
@@ -238,7 +237,7 @@ const Dashboard: React.FC = () => {
         onSearchChange={setSearchQuery}
         onRefresh={handleRefreshData}
         minPrice={0}
-        maxPrice={Math.max(...salesData.map(item => parseFloat(item["Payment Value"]) || 0))}
+        maxPrice={Math.max(...salesData.map(item => parseFloat(item["Payment Value"] || '0')))}
         onPriceRangeChange={handlePriceRangeChange}
         isLoading={isLoading}
         salesData={salesData}
