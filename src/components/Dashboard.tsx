@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -30,7 +31,9 @@ import {
   Tags,
   Users,
   MapPin,
-  CreditCard
+  CreditCard,
+  RefreshCw,
+  Loader
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -38,8 +41,8 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import CategoryAnalysis from './CategoryAnalysis';
 import ExecutiveSummary from './ExecutiveSummary';
 import TopPerformers from './TopPerformers';
+import CustomTableBuilder from './CustomTableBuilder';
 
-// Fixed the warning with the conditional statement
 const Dashboard: React.FC = () => {
   const [salesData, setSalesData] = useState<SalesItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -154,30 +157,30 @@ const Dashboard: React.FC = () => {
   }, [salesSummary]);
 
   useEffect(() => {
-    const fetchSalesData = async () => {
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        const data = await sheetService.fetchSalesData();
-        setSalesData(data);
-        
-        // Set max price for range filter based on actual data
-        const maxSalePrice = Math.max(...data.map(item => parseFloat(item["Payment Value"] || '0')));
-        setPriceRange([0, Math.ceil(maxSalePrice / 1000) * 1000]);
-        
-        toast.success("Sales data loaded successfully!");
-      } catch (err: any) {
-        console.error("Error fetching sales data:", err);
-        setError(err.message || "Failed to fetch sales data");
-        toast.error("Failed to load sales data.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
     fetchSalesData();
   }, []);
+
+  const fetchSalesData = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const data = await sheetService.fetchSalesData();
+      setSalesData(data);
+      
+      // Set max price for range filter based on actual data
+      const maxSalePrice = Math.max(...data.map(item => parseFloat(item["Payment Value"] || '0')));
+      setPriceRange([0, Math.ceil(maxSalePrice / 1000) * 1000]);
+      
+      toast.success("Sales data loaded successfully!");
+    } catch (err: any) {
+      console.error("Error fetching sales data:", err);
+      setError(err.message || "Failed to fetch sales data");
+      toast.error("Failed to load sales data.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handlePeriodChange = (selectedPeriod: TimePeriod) => {
     setTimePeriods(periods => 
@@ -190,20 +193,7 @@ const Dashboard: React.FC = () => {
 
   // Function to refresh data
   const handleRefreshData = async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const data = await sheetService.fetchSalesData();
-      setSalesData(data);
-      toast.success("Data refreshed successfully!");
-    } catch (err: any) {
-      console.error("Error refreshing data:", err);
-      setError(err.message || "Failed to refresh data");
-      toast.error("Failed to refresh data.");
-    } finally {
-      setIsLoading(false);
-    }
+    await fetchSalesData();
   };
 
   const handlePriceRangeChange = (min: number, max: number) => {
@@ -227,7 +217,25 @@ const Dashboard: React.FC = () => {
         <h1 className="text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-900 to-gray-600">
           Sales Analytics Dashboard
         </h1>
+        
+        <Button 
+          variant="outline"
+          onClick={handleRefreshData}
+          disabled={isLoading}
+          className="flex items-center gap-2"
+        >
+          {isLoading ? <Loader className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          <span>Refresh Data</span>
+        </Button>
       </div>
+      
+      {/* Loading Overlay */}
+      {isLoading && (
+        <div className="spinner-overlay">
+          <div className="spinner" />
+          <div className="mt-4 text-white font-medium">Loading data...</div>
+        </div>
+      )}
       
       {/* Filter Panel */}
       <FilterPanel 
@@ -246,42 +254,66 @@ const Dashboard: React.FC = () => {
       />
       
       <Tabs defaultValue="dashboard" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="bg-white border shadow-sm rounded-lg p-1">
-          <TabsTrigger value="dashboard" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-br data-[state=active]:from-blue-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">
-            <LayoutDashboard size={16} />
-            <span className="hidden md:inline">Dashboard</span>
+        <TabsList className="tabs-list">
+          <TabsTrigger value="dashboard" className="tab-trigger">
+            <div className="flex items-center gap-2">
+              <LayoutDashboard size={16} />
+              <span className="hidden md:inline">Dashboard</span>
+            </div>
           </TabsTrigger>
-          <TabsTrigger value="executive" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-br data-[state=active]:from-blue-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">
-            <FileText size={16} />
-            <span className="hidden md:inline">Executive Summary</span>
+          <TabsTrigger value="executive" className="tab-trigger">
+            <div className="flex items-center gap-2">
+              <FileText size={16} />
+              <span className="hidden md:inline">Executive Summary</span>
+            </div>
           </TabsTrigger>
-          <TabsTrigger value="products" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-br data-[state=active]:from-blue-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">
-            <ShoppingCart size={16} />
-            <span className="hidden md:inline">Products</span>
+          <TabsTrigger value="products" className="tab-trigger">
+            <div className="flex items-center gap-2">
+              <ShoppingCart size={16} />
+              <span className="hidden md:inline">Products</span>
+            </div>
           </TabsTrigger>
-          <TabsTrigger value="categories" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-br data-[state=active]:from-blue-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">
-            <Tags size={16} />
-            <span className="hidden md:inline">Categories</span>
+          <TabsTrigger value="categories" className="tab-trigger">
+            <div className="flex items-center gap-2">
+              <Tags size={16} />
+              <span className="hidden md:inline">Categories</span>
+            </div>
           </TabsTrigger>
-          <TabsTrigger value="associates" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-br data-[state=active]:from-blue-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">
-            <Users size={16} />
-            <span className="hidden md:inline">Associates</span>
+          <TabsTrigger value="associates" className="tab-trigger">
+            <div className="flex items-center gap-2">
+              <Users size={16} />
+              <span className="hidden md:inline">Associates</span>
+            </div>
           </TabsTrigger>
-          <TabsTrigger value="locations" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-br data-[state=active]:from-blue-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">
-            <MapPin size={16} />
-            <span className="hidden md:inline">Locations</span>
+          <TabsTrigger value="locations" className="tab-trigger">
+            <div className="flex items-center gap-2">
+              <MapPin size={16} />
+              <span className="hidden md:inline">Locations</span>
+            </div>
           </TabsTrigger>
-          <TabsTrigger value="payment" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-br data-[state=active]:from-blue-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">
-            <CreditCard size={16} />
-            <span className="hidden md:inline">Payment Methods</span>
+          <TabsTrigger value="payment" className="tab-trigger">
+            <div className="flex items-center gap-2">
+              <CreditCard size={16} />
+              <span className="hidden md:inline">Payment Methods</span>
+            </div>
           </TabsTrigger>
-          <TabsTrigger value="performace" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-br data-[state=active]:from-blue-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">
-            <Trophy size={16} />
-            <span className="hidden md:inline">Performance</span>
+          <TabsTrigger value="performace" className="tab-trigger">
+            <div className="flex items-center gap-2">
+              <Trophy size={16} />
+              <span className="hidden md:inline">Performance</span>
+            </div>
           </TabsTrigger>
-          <TabsTrigger value="transactions" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-br data-[state=active]:from-blue-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">
-            <Table size={16} />
-            <span className="hidden md:inline">Transactions</span>
+          <TabsTrigger value="transactions" className="tab-trigger">
+            <div className="flex items-center gap-2">
+              <Table size={16} />
+              <span className="hidden md:inline">Transactions</span>
+            </div>
+          </TabsTrigger>
+          <TabsTrigger value="custom-tables" className="tab-trigger">
+            <div className="flex items-center gap-2">
+              <ChartBarIcon size={16} />
+              <span className="hidden md:inline">Custom Tables</span>
+            </div>
           </TabsTrigger>
         </TabsList>
         
@@ -375,10 +407,9 @@ const Dashboard: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 dashboard-section animate-fade-in" style={{ "--delay": 3 } as React.CSSProperties}>
             <MetricCard 
               title="Average Transaction Value (ATV)" 
-              value={atv}
+              value={Math.round(atv)}
               prefix="₹"
               colorClass="bg-gradient-to-br from-teal-50 to-teal-100 border-teal-200"
-              decimals={0}
               formatter="currency"
               description="Average monetary amount per transaction"
               details={{
@@ -390,10 +421,9 @@ const Dashboard: React.FC = () => {
             />
             <MetricCard 
               title="Average User Value (AUV)" 
-              value={auv}
+              value={Math.round(auv)}
               prefix="₹"
               colorClass="bg-gradient-to-br from-cyan-50 to-cyan-100 border-cyan-200"
-              decimals={0}
               formatter="currency"
               description="Average monetary value per customer"
               details={{
@@ -405,9 +435,8 @@ const Dashboard: React.FC = () => {
             />
             <MetricCard 
               title="Units Per Transaction (UPT)" 
-              value={upt}
+              value={Math.round(upt * 100) / 100}
               colorClass="bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200"
-              decimals={2}
               formatter="number"
               description="Average number of units per transaction"
               details={{
@@ -435,17 +464,13 @@ const Dashboard: React.FC = () => {
             />
           </div>
           
-          {/* Recent Transactions */}
+          {/* Transactions Table */}
           <div className="dashboard-section animate-fade-in" style={{ "--delay": 5 } as React.CSSProperties}>
-            <Card className="shadow-md border-gray-200">
-              <div className="p-4 border-b border-gray-100 bg-gray-50">
-                <h2 className="text-lg font-semibold">Recent Transactions</h2>
-              </div>
-              <SalesTable 
-                data={filteredData.slice(0, 5)} 
-                isLoading={isLoading}
-              />
-            </Card>
+            <SalesTable 
+              data={filteredData} 
+              isLoading={isLoading}
+              refreshData={handleRefreshData}
+            />
           </div>
         </TabsContent>
         
@@ -457,8 +482,8 @@ const Dashboard: React.FC = () => {
         {/* Products Tab */}
         <TabsContent value="products" className="m-0">
           <CategoryAnalysis 
-            salesSummary={salesSummary}
             salesData={filteredData}
+            salesSummary={salesSummary}
             fieldKey="Cleaned Product"
             title="Product"
           />
@@ -467,8 +492,8 @@ const Dashboard: React.FC = () => {
         {/* Categories Tab */}
         <TabsContent value="categories" className="m-0">
           <CategoryAnalysis 
-            salesSummary={salesSummary}
             salesData={filteredData}
+            salesSummary={salesSummary}
             fieldKey="Cleaned Category"
             title="Category"
           />
@@ -477,8 +502,8 @@ const Dashboard: React.FC = () => {
         {/* Associates Tab */}
         <TabsContent value="associates" className="m-0">
           <CategoryAnalysis 
-            salesSummary={salesSummary}
             salesData={filteredData}
+            salesSummary={salesSummary}
             fieldKey="Sold By"
             title="Sales Associate"
           />
@@ -487,8 +512,8 @@ const Dashboard: React.FC = () => {
         {/* Locations Tab */}
         <TabsContent value="locations" className="m-0">
           <CategoryAnalysis 
-            salesSummary={salesSummary}
             salesData={filteredData}
+            salesSummary={salesSummary}
             fieldKey="Calculated Location"
             title="Location"
           />
@@ -497,8 +522,8 @@ const Dashboard: React.FC = () => {
         {/* Payment Methods Tab */}
         <TabsContent value="payment" className="m-0">
           <CategoryAnalysis 
-            salesSummary={salesSummary}
             salesData={filteredData}
+            salesSummary={salesSummary}
             fieldKey="Payment Method"
             title="Payment Method"
           />
@@ -511,19 +536,16 @@ const Dashboard: React.FC = () => {
         
         {/* Transactions Tab */}
         <TabsContent value="transactions" className="m-0">
-          <Card>
-            <div className="p-4 border-b">
-              <h2 className="text-lg font-semibold">All Transactions</h2>
-              <p className="text-sm text-gray-500">
-                {filteredData.length} transactions {activePeriod.id !== 'all-time' ? `in ${activePeriod.label.toLowerCase()}` : ''}
-                {searchQuery && ` matching "${searchQuery}"`}
-              </p>
-            </div>
-            <SalesTable 
-              data={filteredData} 
-              isLoading={isLoading}
-            />
-          </Card>
+          <SalesTable 
+            data={filteredData} 
+            isLoading={isLoading}
+            refreshData={handleRefreshData}
+          />
+        </TabsContent>
+        
+        {/* Custom Tables Tab */}
+        <TabsContent value="custom-tables" className="m-0">
+          <CustomTableBuilder salesData={filteredData} />
         </TabsContent>
       </Tabs>
     </div>
