@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import CounterAnimation from './CounterAnimation';
 import { Card } from '@/components/ui/card';
@@ -223,8 +222,11 @@ const MetricCard: React.FC<MetricCardProps> = ({
                   <div className="h-64">
                     <SalesChart 
                       data={detailsToChartData()} 
-                      title="" 
-                      colors={['#4361ee', '#3a0ca3', '#7209b7', '#f72585', '#4cc9f0', '#fca311', '#14213d', '#06d6a0']}
+                      chartType={chartVisible ? 'mini-chart' : 'hidden'}
+                      chartData={chartData}
+                      title={title}
+                      colors={['#4361ee', '#7209b7', '#f72585']}
+                      description={`Distribution of ${title}`}
                     />
                   </div>
                 </div>
@@ -246,8 +248,9 @@ const MetricCard: React.FC<MetricCardProps> = ({
                 <div className="h-64">
                   <SalesChart 
                     data={chartData} 
-                    title="" 
-                    colors={['#2D3A8C', '#0BC5EA', '#805AD5', '#38A169', '#E53E3E']}
+                    title={`${title} Breakdown`}
+                    colors={['#4361ee', '#3a0ca3', '#7209b7', '#f72585', '#4cc9f0']}
+                    description={`Detailed breakdown of ${title}`}
                   />
                 </div>
               </div>

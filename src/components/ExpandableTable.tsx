@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, ArrowRight } from "lucide-react";
 import { SalesItem } from '@/types/sales';
 import { formatCurrency } from '@/utils/salesUtils';
 
@@ -36,6 +36,7 @@ const ExpandableTable: React.FC<ExpandableTableProps> = ({
   title 
 }) => {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
 
   // Group data by the specified field
   const groupedData: GroupedData = React.useMemo(() => {
@@ -73,12 +74,20 @@ const ExpandableTable: React.FC<ExpandableTableProps> = ({
     }));
   };
 
+  // Toggle expansion of an item
+  const toggleItem = (itemKey: string) => {
+    setExpandedItems(prev => ({
+      ...prev,
+      [itemKey]: !prev[itemKey]
+    }));
+  };
+
   // Calculate grand total
   const grandTotal = sortedGroups.reduce((total, group) => total + group.total, 0);
   const totalItems = sortedGroups.reduce((total, group) => total + group.count, 0);
 
   return (
-    <Card className="overflow-hidden shadow-md border border-gray-200">
+    <Card className="overflow-hidden shadow-lg border border-gray-200">
       <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b flex justify-between items-center">
         <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
         <span className="text-sm text-gray-600">{totalItems} items total</span>
@@ -100,7 +109,7 @@ const ExpandableTable: React.FC<ExpandableTableProps> = ({
                 {/* Parent row */}
                 <TableRow 
                   isGroupHeader 
-                  className="cursor-pointer hover:bg-blue-50 transition-colors"
+                  className="cursor-pointer hover:bg-blue-50 transition-colors border-b border-gray-200"
                   onClick={() => toggleGroup(group.key)}
                 >
                   <TableCell className="w-10">
@@ -120,59 +129,94 @@ const ExpandableTable: React.FC<ExpandableTableProps> = ({
                 </TableRow>
                 
                 {/* Child rows */}
-                {expandedGroups[group.key] && (
-                  <>
-                    {/* Column headers for the expanded items */}
-                    <TableRow isChildRow className="bg-gray-100">
-                      <TableCell indent={1}></TableCell>
-                      {columns.map((column) => (
+                {expandedGroups[group.key] && group.items.map((item, itemIndex) => (
+                  <React.Fragment key={`${group.key}-${itemIndex}`}>
+                    <TableRow 
+                      isChildRow
+                      className="hover:bg-blue-50/50 border-t border-gray-100"
+                      level={1}
+                    >
+                      <TableCell indent={1}>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-5 w-5 p-0 ml-6"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleItem(`${group.key}-${itemIndex}`);
+                          }}
+                        >
+                          {expandedItems[`${group.key}-${itemIndex}`] ? 
+                            <ChevronDown className="h-3 w-3" /> : 
+                            <ArrowRight className="h-3 w-3" />
+                          }
+                        </Button>
+                      </TableCell>
+                      {columns.map((column, colIndex) => (
                         <TableCell 
-                          key={column.key} 
+                          key={`${group.key}-${itemIndex}-${column.key}`}
                           className={column.key === "Payment Value" ? "text-right" : ""}
                         >
-                          <span className="text-xs font-medium text-gray-600">{column.label}</span>
+                          {column.key === "Payment Value" 
+                            ? formatCurrency(Math.round(parseFloat(item[column.key] || '0')))
+                            : item[column.key]}
                         </TableCell>
+                      ))}
+                      {/* Add empty cells for missing columns */}
+                      {columns.length < 4 && Array(4 - columns.length).fill(0).map((_, i) => (
+                        <TableCell key={`empty-${itemIndex}-${i}`}></TableCell>
                       ))}
                     </TableRow>
                     
-                    {group.items.map((item, itemIndex) => (
+                    {/* Show detailed item data when expanded */}
+                    {expandedItems[`${group.key}-${itemIndex}`] && (
                       <TableRow 
-                        key={`${group.key}-${itemIndex}`}
                         isChildRow
-                        className="hover:bg-blue-50/50"
+                        className="bg-gray-50/50"
+                        level={2}
                       >
-                        <TableCell indent={1}></TableCell>
-                        {columns.map((column) => (
-                          <TableCell 
-                            key={`${group.key}-${itemIndex}-${column.key}`}
-                            className={column.key === "Payment Value" ? "text-right" : ""}
-                          >
-                            {column.key === "Payment Value" 
-                              ? formatCurrency(Math.round(parseFloat(item[column.key] || '0')))
-                              : item[column.key]}
-                          </TableCell>
-                        ))}
+                        <TableCell colSpan={5} className="p-0">
+                          <div className="p-3 pl-16 grid grid-cols-2 md:grid-cols-4 gap-3">
+                            {Object.entries(item)
+                              .filter(([key]) => key !== groupByField && !columns.some(col => col.key === key))
+                              .slice(0, 8) // Limit to prevent too much data
+                              .map(([key, value]) => (
+                                <div key={key} className="border-l-2 border-indigo-200 pl-2">
+                                  <div className="text-xs text-gray-500">{key}</div>
+                                  <div className="text-sm font-medium">
+                                    {key === "Payment Value" || key === "Payment Amount" 
+                                      ? formatCurrency(parseFloat(value?.toString() || '0'))
+                                      : value?.toString()}
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        </TableCell>
                       </TableRow>
-                    ))}
-                    
-                    {/* Subtotal row */}
-                    <TableRow className="bg-blue-50/70 font-medium">
-                      <TableCell indent={1}></TableCell>
-                      <TableCell>Subtotal</TableCell>
-                      <TableCell colSpan={columns.length - 2} className="text-right">
-                        {group.count} items
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(Math.round(group.total))}
-                      </TableCell>
-                    </TableRow>
-                  </>
+                    )}
+                  </React.Fragment>
+                ))}
+                
+                {expandedGroups[group.key] && (
+                  <TableRow className="bg-blue-50/70 font-medium border-t border-b border-gray-200">
+                    <TableCell></TableCell>
+                    <TableCell className="pl-10">
+                      <span className="text-blue-700">Subtotal for {group.key}</span>
+                    </TableCell>
+                    <TableCell className="text-right text-blue-700">{group.count} items</TableCell>
+                    <TableCell className="text-right text-blue-700">
+                      {formatCurrency(Math.round(group.total))}
+                    </TableCell>
+                    <TableCell className="text-right text-blue-700">
+                      {Math.round((group.total / grandTotal) * 100)}%
+                    </TableCell>
+                  </TableRow>
                 )}
               </React.Fragment>
             ))}
             
             {/* Total row */}
-            <TableRow className="bg-gray-100 font-semibold">
+            <TableRow className="bg-gray-100 font-semibold text-gray-800 border-t-2 border-gray-300">
               <TableCell></TableCell>
               <TableCell>Grand Total</TableCell>
               <TableCell className="text-right">{totalItems} items</TableCell>
