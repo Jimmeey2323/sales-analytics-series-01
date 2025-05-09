@@ -1,4 +1,3 @@
-
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
@@ -54,18 +53,14 @@ TableFooter.displayName = "TableFooter"
 
 const TableRow = React.forwardRef<
   HTMLTableRowElement,
-  React.HTMLAttributes<HTMLTableRowElement> & { isExpanded?: boolean; isChildRow?: boolean; level?: number; isGroupHeader?: boolean }
->(({ className, isExpanded, isChildRow, level = 0, isGroupHeader, ...props }, ref) => (
+  React.HTMLAttributes<HTMLTableRowElement>
+>(({ className, ...props }, ref) => (
   <tr
     ref={ref}
     className={cn(
       "border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
-      isChildRow && "bg-muted/20",
-      isGroupHeader && "bg-muted/30 font-medium",
-      level > 0 && `pl-${level * 4}`,
       className
     )}
-    data-expanded={isExpanded ? "true" : undefined}
     {...props}
   />
 ))
@@ -88,15 +83,11 @@ TableHead.displayName = "TableHead"
 
 const TableCell = React.forwardRef<
   HTMLTableCellElement,
-  React.TdHTMLAttributes<HTMLTableCellElement> & { indent?: number }
->(({ className, indent = 0, ...props }, ref) => (
+  React.TdHTMLAttributes<HTMLTableCellElement>
+>(({ className, ...props }, ref) => (
   <td
     ref={ref}
-    className={cn(
-      "p-4 align-middle [&:has([role=checkbox])]:pr-0", 
-      indent > 0 && `pl-${4 + indent * 8}`,
-      className
-    )}
+    className={cn("p-4 align-middle [&:has([role=checkbox])]:pr-0", className)}
     {...props}
   />
 ))

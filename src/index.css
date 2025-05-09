@@ -127,7 +127,7 @@
 }
 
 .active-filter {
-  @apply bg-primary/10 text-primary border-primary font-medium;
+  @apply bg-primary/10 text-primary border-primary;
 }
 
 .filter-button {
@@ -153,7 +153,7 @@
 
 /* Override for tabs component to make it look modern */
 .tabs-list {
-  @apply bg-white border border-gray-100 shadow-sm rounded-lg p-1 flex flex-wrap gap-1;
+  @apply bg-white border border-gray-100 shadow-sm rounded-lg p-1;
 }
 
 .tab-trigger {
@@ -165,16 +165,12 @@
 }
 
 /* Table styling improvements */
-.table-fancy {
-  @apply w-full border-collapse overflow-hidden rounded-lg;
-}
-
 .table-fancy th {
-  @apply bg-gradient-to-b from-gray-50 to-gray-100 text-gray-700 text-center py-3 px-4 font-medium border-b border-gray-200;
+  @apply bg-gray-50 text-gray-700 text-center;
 }
 
 .table-fancy td {
-  @apply text-center border-b border-gray-100 py-3 px-4 transition-colors;
+  @apply text-center border-b border-gray-100;
 }
 
 .table-fancy tr:hover td {
@@ -185,68 +181,7 @@
   @apply border-b-0;
 }
 
-.table-fancy .totals-row {
-  @apply bg-gray-50 font-semibold;
-}
-
-.table-fancy .totals-row td {
-  @apply border-t-2 border-gray-200;
-}
-
-/* Drill-down row styling */
-.drill-down-row {
-  @apply bg-gray-50 border-l-4 border-primary overflow-hidden transition-all;
-  max-height: 0;
-}
-
-.drill-down-row.expanded {
-  @apply max-h-screen py-2;
-}
-
 /* Card enhanced styling */
 .enhanced-card {
   @apply border-0 shadow-xl bg-gradient-to-br from-white to-gray-50 rounded-xl overflow-hidden;
-}
-
-.executive-card {
-  @apply bg-white border border-gray-200 rounded-lg shadow-md hover:shadow-lg transition-all;
-}
-
-.executive-card-header {
-  @apply p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center;
-}
-
-.executive-card-body {
-  @apply p-4;
-}
-
-/* Loading spinner */
-.spinner-overlay {
-  @apply fixed inset-0 bg-black/30 flex items-center justify-center z-50;
-}
-
-.spinner {
-  @apply h-16 w-16 rounded-full border-4 border-t-primary animate-spin;
-  border-color: #3b82f6 #e5e7eb #e5e7eb #e5e7eb;
-}
-
-/* Custom table builder */
-.table-builder-section {
-  @apply bg-white rounded-lg shadow-md border border-gray-100 p-4 mb-6;
-}
-
-.field-selector {
-  @apply border border-gray-200 rounded-lg p-2 bg-gray-50 min-h-[200px] overflow-y-auto;
-}
-
-.field-item {
-  @apply px-3 py-2 bg-white rounded border border-gray-100 mb-2 cursor-move flex justify-between items-center;
-}
-
-.field-item.selected {
-  @apply bg-blue-50 border-blue-200;
-}
-
-.aggregation-option {
-  @apply flex items-center gap-2 p-2 rounded hover:bg-gray-100;
 }

@@ -223,9 +223,8 @@ const MetricCard: React.FC<MetricCardProps> = ({
                   <div className="h-64">
                     <SalesChart 
                       data={detailsToChartData()} 
-                      title={title}
-                      colors={['#4361ee', '#7209b7', '#f72585']}
-                      description={`Distribution of ${title}`}
+                      title="" 
+                      colors={['#4361ee', '#3a0ca3', '#7209b7', '#f72585', '#4cc9f0', '#fca311', '#14213d', '#06d6a0']}
                     />
                   </div>
                 </div>
@@ -247,9 +246,8 @@ const MetricCard: React.FC<MetricCardProps> = ({
                 <div className="h-64">
                   <SalesChart 
                     data={chartData} 
-                    title={`${title} Breakdown`}
-                    colors={['#4361ee', '#3a0ca3', '#7209b7', '#f72585', '#4cc9f0']}
-                    description={`Detailed breakdown of ${title}`}
+                    title="" 
+                    colors={['#2D3A8C', '#0BC5EA', '#805AD5', '#38A169', '#E53E3E']}
                   />
                 </div>
               </div>

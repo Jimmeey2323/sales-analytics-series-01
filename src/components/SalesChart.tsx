@@ -1,241 +1,245 @@
-
-import React, { useState, useCallback } from 'react';
-import { ChartData } from '@/types/sales';
-import { 
-  ResponsiveContainer, 
-  PieChart, 
-  Pie, 
-  Cell, 
-  Tooltip, 
-  Legend,
+import React from 'react';
+import {
+  ResponsiveContainer,
   BarChart,
   Bar,
   XAxis,
   YAxis,
   CartesianGrid,
+  Tooltip,
+  Legend,
+  PieChart,
+  Pie,
+  Cell,
   RadialBarChart,
   RadialBar,
-  Sector
 } from 'recharts';
-import { Card } from '@/components/ui/card';
-import { formatCurrency } from '@/utils/salesUtils';
-import { Tabs, TabsList, TabsContent, TabsTrigger } from '@/components/ui/tabs';
-import { ChartPieIcon, BarChart3, Activity } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { DollarSign, ArrowUp, ArrowDown } from 'lucide-react';
 
-interface SalesChartProps {
-  data: ChartData[];
-  title: string;
-  colors: string[];
-  description: string;
+interface SalesData {
+  name: string;
+  value: number;
+  color?: string;
 }
 
-// Active shape for the pie chart when a segment is selected
-const renderActiveShape = (props: any) => {
-  const RADIAN = Math.PI / 180;
-  const { 
-    cx, cy, midAngle, innerRadius, outerRadius, startAngle, endAngle, 
-    fill, payload, percent, value 
-  } = props;
-  const sin = Math.sin(-RADIAN * midAngle);
-  const cos = Math.cos(-RADIAN * midAngle);
-  const sx = cx + (outerRadius + 10) * cos;
-  const sy = cy + (outerRadius + 10) * sin;
-  const mx = cx + (outerRadius + 30) * cos;
-  const my = cy + (outerRadius + 30) * sin;
-  const ex = mx + (cos >= 0 ? 1 : -1) * 22;
-  const ey = my;
-  const textAnchor = cos >= 0 ? 'start' : 'end';
+interface CategoryData {
+  category: string;
+  sales: number;
+}
 
-  return (
-    <g>
-      <text x={cx} y={cy} dy={8} textAnchor="middle" fill={fill} className="text-lg font-medium">
-        {payload.name}
-      </text>
-      <Sector
-        cx={cx}
-        cy={cy}
-        innerRadius={innerRadius}
-        outerRadius={outerRadius}
-        startAngle={startAngle}
-        endAngle={endAngle}
-        fill={fill}
-      />
-      <Sector
-        cx={cx}
-        cy={cy}
-        startAngle={startAngle}
-        endAngle={endAngle}
-        innerRadius={outerRadius + 6}
-        outerRadius={outerRadius + 10}
-        fill={fill}
-      />
-      <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={fill} fill="none" />
-      <circle cx={ex} cy={ey} r={2} fill={fill} stroke="none" />
-      <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} textAnchor={textAnchor} fill="#333" className="text-sm">
-        {`${formatCurrency(value)}`}
-      </text>
-      <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} dy={18} textAnchor={textAnchor} fill="#999" className="text-xs">
-        {`(${(percent * 100).toFixed(2)}%)`}
-      </text>
-    </g>
-  );
-};
+interface SalesGrowthData {
+  month: string;
+  sales: number;
+  growth: number;
+}
 
-const SalesChart: React.FC<SalesChartProps> = ({ data, title, colors, description }) => {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [chartType, setChartType] = useState<'pie' | 'bar' | 'radial'>('pie');
+interface TopProduct {
+  name: string;
+  sales: number;
+  color: string;
+}
 
-  const onPieEnter = useCallback(
-    (_, index: number) => {
-      setActiveIndex(index);
-    },
-    [setActiveIndex]
-  );
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
-  const renderCustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white p-3 rounded-md shadow-lg border border-gray-200">
-          <p className="font-bold text-gray-800">{`${payload[0].name}`}</p>
-          <p className="text-gray-600 text-sm">{`${description}`}</p>
-          <p className="text-gray-800 font-medium mt-1">{`Revenue: ${formatCurrency(payload[0].value)}`}</p>
-        </div>
-      );
+const salesData: SalesData[] = [
+  { name: 'Jan', value: 4000 },
+  { name: 'Feb', value: 3000 },
+  { name: 'Mar', value: 2000 },
+  { name: 'Apr', value: 2780 },
+  { name: 'May', value: 1890 },
+  { name: 'Jun', value: 2390 },
+  { name: 'Jul', value: 3490 },
+];
+
+const categoryData: CategoryData[] = [
+  { category: 'Electronics', sales: 400 },
+  { category: 'Clothing', sales: 300 },
+  { category: 'Home Goods', sales: 200 },
+  { category: 'Books', sales: 278 },
+  { category: 'Toys', sales: 189 },
+];
+
+const salesGrowthData: SalesGrowthData[] = [
+  { month: 'Jan', sales: 4000, growth: 10 },
+  { month: 'Feb', sales: 3000, growth: -5 },
+  { month: 'Mar', sales: 2000, growth: 3 },
+  { month: 'Apr', sales: 2780, growth: 7 },
+  { month: 'May', sales: 1890, growth: -2 },
+  { month: 'Jun', sales: 2390, growth: 5 },
+  { month: 'Jul', sales: 3490, growth: 9 },
+];
+
+const topProducts: TopProduct[] = [
+  { name: 'Product A', sales: 4000, color: '#0088FE' },
+  { name: 'Product B', sales: 3000, color: '#00C49F' },
+  { name: 'Product C', sales: 2000, color: '#FFBB28' },
+  { name: 'Product D', sales: 2780, color: '#FF8042' },
+  { name: 'Product E', sales: 1890, color: '#8884d8' },
+];
+
+interface SalesChartProps {
+    data: SalesData[];
+    isLoading: boolean;
+}
+
+const SalesChart: React.FC<SalesChartProps> = ({ data, isLoading }) => {
+    if (isLoading) {
+        return <p>Loading chart...</p>;
     }
 
-    return null;
-  };
+    if (!data || data.length === 0) {
+        return <p>No data available for the chart.</p>;
+    }
 
-  const chartData = data.length > 0 ? data : [{ name: 'No Data', value: 100 }];
+    return (
+        <Card className="col-span-4 md:col-span-8 lg:col-span-8">
+            <CardHeader>
+                <CardTitle>Sales Performance</CardTitle>
+            </CardHeader>
+            <CardContent className="pl-2 pb-4">
+                <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={data}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Bar dataKey="value" fill="#8884d8" />
+                    </BarChart>
+                </ResponsiveContainer>
+            </CardContent>
+        </Card>
+    );
+};
 
+export default SalesChart;
+
+export const CategoryBreakdown = () => {
   return (
-    <Card className="bg-white shadow-lg rounded-lg overflow-hidden border-0">
-      <div className="p-4 border-b bg-gradient-to-r from-gray-50 to-gray-100">
-        <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
-        <p className="text-sm text-gray-500">{description}</p>
-      </div>
-      
-      <div className="px-4 pt-4">
-        <Tabs defaultValue="pie" value={chartType} onValueChange={(value) => setChartType(value as 'pie' | 'bar' | 'radial')}>
-          <TabsList className="mb-3 bg-gray-100 p-1">
-            <TabsTrigger value="pie" className="data-[state=active]:bg-white">
-              <div className="flex items-center gap-1">
-                <ChartPieIcon size={16} />
-                <span>Pie</span>
-              </div>
-            </TabsTrigger>
-            <TabsTrigger value="bar" className="data-[state=active]:bg-white">
-              <div className="flex items-center gap-1">
-                <BarChart3 size={16} />
-                <span>Bar</span>
-              </div>
-            </TabsTrigger>
-            <TabsTrigger value="radial" className="data-[state=active]:bg-white">
-              <div className="flex items-center gap-1">
-                <Activity size={16} />
-                <span>Radial</span>
-              </div>
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="pie" className="m-0">
-            {data.length > 0 ? (
-              <ResponsiveContainer width="100%" height={350}>
-                <PieChart>
-                  <Pie
-                    activeIndex={activeIndex}
-                    activeShape={renderActiveShape}
-                    data={chartData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={70}
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="value"
-                    onMouseEnter={onPieEnter}
-                    animationDuration={1000}
-                  >
-                    {chartData.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={colors[index % colors.length]} 
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip content={renderCustomTooltip} />
-                  <Legend layout="vertical" verticalAlign="middle" align="right" />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="text-center py-12 text-gray-400">No data available</div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="bar" className="m-0">
-            {data.length > 0 ? (
-              <ResponsiveContainer width="100%" height={350}>
-                <BarChart
-                  data={chartData}
-                  margin={{
-                    top: 20,
-                    right: 30,
-                    left: 20,
-                    bottom: 5,
-                  }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip content={renderCustomTooltip} />
-                  <Bar dataKey="value" animationDuration={1000}>
-                    {chartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="text-center py-12 text-gray-400">No data available</div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="radial" className="m-0">
-            {data.length > 0 ? (
-              <ResponsiveContainer width="100%" height={350}>
-                <RadialBarChart 
-                  cx="50%" 
-                  cy="50%" 
-                  innerRadius="10%" 
-                  outerRadius="80%" 
-                  data={chartData}
-                  startAngle={90} 
-                  endAngle={-270}
-                >
-                  <RadialBar
-                    label={{ position: "insideEnd", fill: "#333", fontSize: 11 }}
-                    background
-                    dataKey="value"
-                    animationDuration={1500}
-                  >
-                    {chartData.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={colors[index % colors.length]} 
-                      />
-                    ))}
-                  </RadialBar>
-                  <Legend iconSize={10} layout="vertical" verticalAlign="middle" align="right" />
-                  <Tooltip content={renderCustomTooltip} />
-                </RadialBarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="text-center py-12 text-gray-400">No data available</div>
-            )}
-          </TabsContent>
-        </Tabs>
-      </div>
+    <Card className="col-span-4 md:col-span-4 lg:col-span-3">
+      <CardHeader>
+        <CardTitle>Category Breakdown</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ResponsiveContainer width="100%" height={300}>
+          <PieChart>
+            <Pie
+              dataKey="sales"
+              isAnimationActive={false}
+              data={categoryData}
+              cx="50%"
+              cy="50%"
+              outerRadius={80}
+              fill="#8884d8"
+              label
+            >
+              {categoryData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip />
+          </PieChart>
+        </ResponsiveContainer>
+      </CardContent>
     </Card>
   );
 };
 
-export default SalesChart;
+export const SalesGrowth = () => {
+  return (
+    <Card className="col-span-4 md:col-span-4 lg:col-span-4">
+      <CardHeader>
+        <CardTitle>Sales Growth</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={salesGrowthData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="month" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="sales" fill="#82ca9d" />
+          </BarChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+  );
+};
+
+export const TopProducts = () => {
+    return (
+      <Card className="col-span-4 md:col-span-8 lg:col-span-4">
+        <CardHeader>
+          <CardTitle>Top Selling Products</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {topProducts.map((product) => (
+              <div key={product.name} className="flex items-center justify-between">
+                <span className="font-medium">{product.name}</span>
+                <Badge variant="secondary">
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  {product.sales}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+export const RevenueOverview = () => {
+    const revenue = 54000;
+    const growth = 12.5;
+  
+    return (
+      <Card className="col-span-4 md:col-span-4 lg:col-span-3">
+        <CardHeader>
+          <CardTitle>Revenue Overview</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">${revenue}</div>
+          <div className="flex items-center mt-2 text-sm text-muted-foreground">
+            {growth > 0 ? (
+              <ArrowUp className="h-4 w-4 mr-1 text-green-500" />
+            ) : (
+              <ArrowDown className="h-4 w-4 mr-1 text-red-500" />
+            )}
+            <span>{growth}% vs last month</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+export const RadialBarChartComponent = ({ data }) => {
+  return (
+    <ResponsiveContainer width="100%" height={300}>
+      <RadialBarChart 
+        cx="50%" 
+        cy="50%" 
+        innerRadius="10%" 
+        outerRadius="80%" 
+        barSize={10} 
+        data={data}
+      >
+        <RadialBar
+          label={{ position: "insideEnd", fill: "#333", fontSize: 11 }}
+          background
+          dataKey="value"
+          animationDuration={900}
+        >
+          {data.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={entry.color} />
+          ))}
+        </RadialBar>
+        <Legend iconSize={10} layout="vertical" verticalAlign="middle" align="right" />
+        <Tooltip />
+      </RadialBarChart>
+    </ResponsiveContainer>
+  );
+};

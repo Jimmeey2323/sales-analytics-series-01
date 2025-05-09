@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { SalesItem } from '../types/sales';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,12 +30,7 @@ import {
   MapPin,
   CreditCard,
   Tag,
-  Info,
-  ChevronDown,
-  ChevronUp,
-  RefreshCw,
-  Download,
-  Loader
+  Info
 } from 'lucide-react';
 import { formatCurrency, parseDate } from '@/utils/salesUtils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -61,17 +56,16 @@ import {
 interface SalesTableProps {
   data: SalesItem[];
   isLoading: boolean;
-  refreshData?: () => Promise<void>;
 }
 
 type ViewMode = 'default' | 'compact' | 'detailed' | 'grid' | 'grouped';
 
-const SalesTable: React.FC<SalesTableProps> = ({ data, isLoading, refreshData }) => {
+const SalesTable: React.FC<SalesTableProps> = ({ data, isLoading }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<{
-    key: keyof SalesItem | string;
+    key: keyof SalesItem;
     direction: 'asc' | 'desc';
   }>({
     key: 'Payment Date',
@@ -80,40 +74,40 @@ const SalesTable: React.FC<SalesTableProps> = ({ data, isLoading, refreshData })
   const [detailedItem, setDetailedItem] = useState<SalesItem | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('default');
   const [groupBy, setGroupBy] = useState<keyof SalesItem | ''>('');
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
-  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
-  const [visibleColumns, setVisibleColumns] = useState<Array<keyof SalesItem | string>>([
+  const [visibleColumns, setVisibleColumns] = useState<Array<keyof SalesItem>>([
     'Payment Date', 
     'Customer Name', 
     'Payment Item', 
     'Cleaned Product',
-    'Cleaned Category',
     'Payment Method', 
     'Payment Value', 
     'Payment Status'
   ]);
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Filter data based on search term
   const filteredData = useMemo(() => {
     if (!searchTerm) return data;
     
-    const searchTermLower = searchTerm.toLowerCase();
     return data.filter(item => {
-      return Object.entries(item).some(([key, value]) => {
-        if (value === null || value === undefined) return false;
-        return value.toString().toLowerCase().includes(searchTermLower);
-      });
+      const searchTermLower = searchTerm.toLowerCase();
+      return (
+        item["Customer Name"]?.toLowerCase().includes(searchTermLower) ||
+        item["Customer Email"]?.toLowerCase().includes(searchTermLower) ||
+        item["Payment Item"]?.toLowerCase().includes(searchTermLower) ||
+        item["Calculated Location"]?.toLowerCase().includes(searchTermLower) ||
+        item["Cleaned Product"]?.toLowerCase().includes(searchTermLower) ||
+        item["Payment Transaction ID"]?.toLowerCase().includes(searchTermLower)
+      );
     });
   }, [data, searchTerm]);
 
-  // Sort data with proper date handling
+  // Sort data
   const sortedData = useMemo(() => {
     if (!sortConfig.key) return filteredData;
     
     return [...filteredData].sort((a, b) => {
-      const keyA = a[sortConfig.key as keyof SalesItem];
-      const keyB = b[sortConfig.key as keyof SalesItem];
+      const keyA = a[sortConfig.key];
+      const keyB = b[sortConfig.key];
       
       // Handle specific column types
       if (sortConfig.key === 'Payment Value') {
@@ -122,10 +116,9 @@ const SalesTable: React.FC<SalesTableProps> = ({ data, isLoading, refreshData })
           : parseFloat(keyB || '0') - parseFloat(keyA || '0');
       }
       
-      // Handle date columns - Payment Date or any column with monthYear
-      if (sortConfig.key === 'Payment Date' || sortConfig.key.toString().includes('monthYear') || sortConfig.key.toString().includes('date')) {
-        const dateA = keyA ? parseDate(keyA.toString()) || new Date(0) : new Date(0);
-        const dateB = keyB ? parseDate(keyB.toString()) || new Date(0) : new Date(0);
+      if (sortConfig.key === 'Payment Date') {
+        const dateA = parseDate(keyA) || new Date(0);
+        const dateB = parseDate(keyB) || new Date(0);
         return sortConfig.direction === 'asc' 
           ? dateA.getTime() - dateB.getTime()
           : dateB.getTime() - dateA.getTime();
@@ -193,7 +186,7 @@ const SalesTable: React.FC<SalesTableProps> = ({ data, isLoading, refreshData })
 
   const totalPages = Math.ceil(sortedData.length / pageSize);
 
-  const handleSort = (key: keyof SalesItem | string) => {
+  const handleSort = (key: keyof SalesItem) => {
     setSortConfig({
       key,
       direction: 
@@ -218,12 +211,12 @@ const SalesTable: React.FC<SalesTableProps> = ({ data, isLoading, refreshData })
     }).format(date);
   };
 
-  const renderSortIcon = (key: keyof SalesItem | string) => {
+  const renderSortIcon = (key: keyof SalesItem) => {
     if (sortConfig.key !== key) return null;
     return sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />;
   };
 
-  const toggleColumnVisibility = (column: keyof SalesItem | string) => {
+  const toggleColumnVisibility = (column: keyof SalesItem) => {
     if (visibleColumns.includes(column)) {
       // Only remove if we would still have at least one visible column
       if (visibleColumns.length > 1) {
@@ -236,51 +229,6 @@ const SalesTable: React.FC<SalesTableProps> = ({ data, isLoading, refreshData })
 
   const handleRowClick = (item: SalesItem) => {
     setDetailedItem(item);
-  };
-
-  const handleRowExpand = (id: string) => {
-    setExpandedRows(prev => ({
-      ...prev,
-      [id]: !prev[id]
-    }));
-  };
-
-  const toggleGroupExpand = (group: string) => {
-    setExpandedGroups(prev => ({
-      ...prev,
-      [group]: !prev[group]
-    }));
-  };
-
-  const handleRefresh = async () => {
-    if (refreshData) {
-      setIsRefreshing(true);
-      await refreshData();
-      setIsRefreshing(false);
-    }
-  };
-
-  const exportToCsv = () => {
-    // Create CSV content
-    const headers = visibleColumns.map(col => `"${col}"`).join(',');
-    const rows = sortedData.map(item => {
-      return visibleColumns.map(col => `"${item[col as keyof SalesItem] || ''}"`).join(',');
-    }).join('\n');
-    
-    const csvContent = `${headers}\n${rows}`;
-    
-    // Create and download the file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'sales_data.csv');
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   const renderTableHeader = () => {
@@ -300,25 +248,22 @@ const SalesTable: React.FC<SalesTableProps> = ({ data, isLoading, refreshData })
     return (
       <TableHeader className="bg-gray-50">
         <TableRow>
-          {viewMode === 'default' && (
-            <TableHead className="w-8">
-              <span className="sr-only">Expand</span>
-            </TableHead>
-          )}
-          {visibleColumns.map((key) => (
-            <TableHead 
-              key={key.toString()}
-              className={`cursor-pointer whitespace-nowrap ${
-                key === 'Payment Value' ? 'text-right' : key === 'Payment Status' ? 'text-right' : ''
-              }`}
-              onClick={() => handleSort(key)}
-            >
-              <div className="flex items-center space-x-1">
-                {availableColumns[key.toString()]?.icon || null}
-                <span>{availableColumns[key.toString()]?.label || key}</span>
-                {renderSortIcon(key)}
-              </div>
-            </TableHead>
+          {Object.entries(availableColumns).map(([key, value]) => (
+            visibleColumns.includes(key as keyof SalesItem) && (
+              <TableHead 
+                key={key}
+                className={`cursor-pointer whitespace-nowrap ${
+                  key === 'Payment Value' ? 'text-right' : key === 'Payment Status' ? 'text-right' : ''
+                }`}
+                onClick={() => handleSort(key as keyof SalesItem)}
+              >
+                <div className="flex items-center space-x-1">
+                  {value.icon}
+                  <span>{value.label}</span>
+                  {renderSortIcon(key as keyof SalesItem)}
+                </div>
+              </TableHead>
+            )
           ))}
         </TableRow>
       </TableHeader>
@@ -332,12 +277,8 @@ const SalesTable: React.FC<SalesTableProps> = ({ data, isLoading, refreshData })
       <div className="space-y-6">
         {Object.entries(groupedData).sort().map(([group, items]) => (
           <Card key={group} className="overflow-hidden border-l-4 border-primary/70 shadow-md">
-            <div 
-              className="p-3 bg-gray-50 border-b flex justify-between items-center cursor-pointer"
-              onClick={() => toggleGroupExpand(group)}
-            >
+            <div className="p-3 bg-gray-50 border-b flex justify-between items-center">
               <div className="flex items-center gap-2">
-                {expandedGroups[group] ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                 <span className="font-medium text-gray-800">{group}</span>
                 <span className="text-sm text-gray-500">{items.length} items</span>
               </div>
@@ -345,32 +286,14 @@ const SalesTable: React.FC<SalesTableProps> = ({ data, isLoading, refreshData })
                 {formatCurrency(groupSummary[group].total)}
               </div>
             </div>
-            {expandedGroups[group] && (
-              <div className="overflow-x-auto">
-                <Table>
-                  {renderTableHeader()}
-                  <TableBody>
-                    {items.map((item, index) => renderTableRow(item, index))}
-                    {/* Group Totals Row */}
-                    <TableRow className="bg-gray-50 font-medium">
-                      <TableCell colSpan={viewMode === 'default' ? 1 : 0}></TableCell>
-                      {visibleColumns.map((col, idx) => (
-                        <TableCell 
-                          key={`total-${col}-${idx}`}
-                          className={col === 'Payment Value' ? 'text-right' : ''}
-                        >
-                          {col === 'Payment Value' 
-                            ? formatCurrency(groupSummary[group].total)
-                            : col === 'Customer Name' 
-                              ? `Total (${items.length} items)`
-                              : ''}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+            <div className="overflow-x-auto">
+              <Table>
+                {renderTableHeader()}
+                <TableBody>
+                  {items.map((item, index) => renderTableRow(item, index))}
+                </TableBody>
+              </Table>
+            </div>
           </Card>
         ))}
       </div>
@@ -424,106 +347,65 @@ const SalesTable: React.FC<SalesTableProps> = ({ data, isLoading, refreshData })
     );
   };
 
-  const getRowId = (item: SalesItem, index: number) => {
-    return `${item["Payment Transaction ID"] || ""}-${index}`;
-  };
-
-  const renderChildRows = (item: SalesItem, index: number) => {
-    const rowId = getRowId(item, index);
-    
-    // Create a detailed view of all data in the item
-    return (
-      <TableRow 
-        key={`child-${rowId}`} 
-        className={`bg-gray-50 ${expandedRows[rowId] ? 'border-b' : ''}`}
-      >
-        <TableCell colSpan={visibleColumns.length + 1} className="p-0">
-          <div className={`drill-down-row ${expandedRows[rowId] ? 'expanded' : ''}`}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
-              {Object.entries(item).map(([key, value]) => (
-                <div key={key} className="flex flex-col">
-                  <span className="text-xs text-gray-500">{key}</span>
-                  <span className="font-medium">{value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+  const renderTableRow = (item: SalesItem, index: number) => (
+    <TableRow 
+      key={`${item["Payment Transaction ID"]}-${index}`}
+      className="cursor-pointer hover:bg-gray-50"
+      onClick={() => handleRowClick(item)}
+    >
+      {visibleColumns.includes("Payment Date") && (
+        <TableCell className="whitespace-nowrap">{formatDate(item["Payment Date"])}</TableCell>
+      )}
+      {visibleColumns.includes("Customer Name") && (
+        <TableCell>
+          <div className="font-medium">{item["Customer Name"]}</div>
+          <div className="text-xs text-gray-500">{item["Customer Email"]}</div>
         </TableCell>
-      </TableRow>
-    );
-  };
+      )}
+      {visibleColumns.includes("Payment Item") && (
+        <TableCell>{item["Payment Item"]}</TableCell>
+      )}
+      {visibleColumns.includes("Cleaned Product") && (
+        <TableCell>{item["Cleaned Product"]}</TableCell>
+      )}
+      {visibleColumns.includes("Payment Method") && (
+        <TableCell>{item["Payment Method"]}</TableCell>
+      )}
+      {visibleColumns.includes("Payment Value") && (
+        <TableCell className="text-right font-medium">
+          {formatCurrency(parseFloat(item["Payment Value"]) || 0)}
+        </TableCell>
+      )}
+      {visibleColumns.includes("Payment Status") && (
+        <TableCell className="text-right">
+          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+            item["Payment Status"] === "succeeded"
+              ? "bg-green-100 text-green-800"
+              : item["Payment Status"] === "pending"
+              ? "bg-yellow-100 text-yellow-800"
+              : "bg-red-100 text-red-800"
+          }`}>
+            {item["Payment Status"]}
+          </span>
+        </TableCell>
+      )}
+    </TableRow>
+  );
 
-  const renderTableRow = (item: SalesItem, index: number) => {
-    const rowId = getRowId(item, index);
-    
-    return (
-      <React.Fragment key={rowId}>
-        <TableRow 
-          className="cursor-pointer hover:bg-gray-50"
-        >
-          {viewMode === 'default' && (
-            <TableCell className="p-0 w-8">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleRowExpand(rowId);
-                }}
-                className="h-8 w-8"
-              >
-                {expandedRows[rowId] ? (
-                  <ChevronUp size={16} />
-                ) : (
-                  <ChevronDown size={16} />
-                )}
-              </Button>
-            </TableCell>
-          )}
-          
-          {visibleColumns.map((col) => (
-            <TableCell 
-              key={`${rowId}-${col}`} 
-              className={`whitespace-nowrap ${
-                col === 'Payment Value' ? 'text-right font-medium' : 
-                col === 'Payment Status' ? 'text-right' : ''
-              }`}
-              onClick={() => handleRowClick(item)}
-            >
-              {col === 'Payment Date' ? (
-                formatDate(item[col as keyof SalesItem] as string)
-              ) : col === 'Payment Value' ? (
-                formatCurrency(parseFloat(item[col as keyof SalesItem] as string || '0'))
-              ) : col === 'Customer Name' ? (
-                <div>
-                  <div className="font-medium">{item[col as keyof SalesItem]}</div>
-                  <div className="text-xs text-gray-500">{item["Customer Email"]}</div>
-                </div>
-              ) : col === 'Payment Status' ? (
-                <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                  item[col as keyof SalesItem] === "succeeded"
-                    ? "bg-green-100 text-green-800"
-                    : item[col as keyof SalesItem] === "pending"
-                    ? "bg-yellow-100 text-yellow-800"
-                    : "bg-red-100 text-red-800"
-                }`}>
-                  {item[col as keyof SalesItem]}
-                </span>
-              ) : (
-                item[col as keyof SalesItem]
-              )}
-            </TableCell>
-          ))}
-        </TableRow>
-        
-        {/* Child rows for drill-down */}
-        {viewMode === 'default' && renderChildRows(item, index)}
-      </React.Fragment>
-    );
+  const handleGroupChange = (value: string) => {
+    if (value === 'none' || value === '') {
+      setGroupBy('');
+      if (viewMode === 'grouped') {
+        setViewMode('default');
+      }
+    } else {
+      setGroupBy(value as keyof SalesItem);
+      setViewMode('grouped');
+    }
   };
 
   return (
-    <div className="w-full rounded-xl overflow-hidden bg-white border border-gray-200 shadow-md">
+    <div className="w-full rounded-xl overflow-hidden">
       <div className="p-4 bg-white border-b border-gray-200 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <div className="relative">
@@ -539,27 +421,6 @@ const SalesTable: React.FC<SalesTableProps> = ({ data, isLoading, refreshData })
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="flex items-center gap-2"
-            onClick={handleRefresh}
-            disabled={isRefreshing || !refreshData}
-          >
-            {isRefreshing ? <Loader size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-            <span>Refresh</span>
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="flex items-center gap-2"
-            onClick={exportToCsv}
-          >
-            <Download size={14} />
-            <span>Export</span>
-          </Button>
-        
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="flex items-center">
@@ -567,47 +428,64 @@ const SalesTable: React.FC<SalesTableProps> = ({ data, isLoading, refreshData })
                 <span>Columns</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end">
               <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {Object.keys({
-                "Payment Date": "Date",
-                "Customer Name": "Customer",
-                "Payment Item": "Item",
-                "Cleaned Product": "Product",
-                "Cleaned Category": "Category",
-                "Calculated Location": "Location",
-                "Payment Method": "Method",
-                "Payment Value": "Amount",
-                "Payment Status": "Status",
-                "Sold By": "Sold By"
-              }).map(col => (
-                <DropdownMenuCheckboxItem
-                  key={col}
-                  checked={visibleColumns.includes(col)}
-                  onCheckedChange={() => toggleColumnVisibility(col)}
-                >
-                  {col}
-                </DropdownMenuCheckboxItem>
-              ))}
+              <DropdownMenuCheckboxItem
+                checked={visibleColumns.includes("Payment Date")}
+                onCheckedChange={() => toggleColumnVisibility("Payment Date")}
+              >
+                Date
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={visibleColumns.includes("Customer Name")}
+                onCheckedChange={() => toggleColumnVisibility("Customer Name")}
+              >
+                Customer
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={visibleColumns.includes("Payment Item")}
+                onCheckedChange={() => toggleColumnVisibility("Payment Item")}
+              >
+                Item
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={visibleColumns.includes("Cleaned Product")}
+                onCheckedChange={() => toggleColumnVisibility("Cleaned Product")}
+              >
+                Product
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={visibleColumns.includes("Payment Method")}
+                onCheckedChange={() => toggleColumnVisibility("Payment Method")}
+              >
+                Method
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={visibleColumns.includes("Payment Value")}
+                onCheckedChange={() => toggleColumnVisibility("Payment Value")}
+              >
+                Amount
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={visibleColumns.includes("Payment Status")}
+                onCheckedChange={() => toggleColumnVisibility("Payment Status")}
+              >
+                Status
+              </DropdownMenuCheckboxItem>
             </DropdownMenuContent>
           </DropdownMenu>
           
           {/* Group By Dropdown */}
           <Select 
-            value={groupBy as string} 
-            onValueChange={(value) => {
-              setGroupBy(value === '' ? '' : value as keyof SalesItem);
-              if (value) {
-                setViewMode('grouped');
-              }
-            }}
+            value={groupBy} 
+            onValueChange={handleGroupChange}
           >
             <SelectTrigger className="w-[130px] h-9 text-xs">
               <SelectValue placeholder="Group by..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">No grouping</SelectItem>
+              <SelectItem value="none">No grouping</SelectItem>
               <SelectItem value="Cleaned Category">Category</SelectItem>
               <SelectItem value="Cleaned Product">Product</SelectItem>
               <SelectItem value="Calculated Location">Location</SelectItem>
@@ -656,7 +534,6 @@ const SalesTable: React.FC<SalesTableProps> = ({ data, isLoading, refreshData })
               <SelectItem value="10">10 rows</SelectItem>
               <SelectItem value="20">20 rows</SelectItem>
               <SelectItem value="50">50 rows</SelectItem>
-              <SelectItem value="100">100 rows</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -674,22 +551,19 @@ const SalesTable: React.FC<SalesTableProps> = ({ data, isLoading, refreshData })
         </div>
       )}
 
-      <div className={viewMode === 'grid' ? 'p-4' : 'overflow-x-auto'}>
+      <div className="overflow-x-auto">
         {viewMode === 'grid' ? (
           renderGridView()
         ) : viewMode === 'grouped' ? (
           renderGroupedView()
         ) : (
-          <Table className="table-fancy">
+          <Table>
             {renderTableHeader()}
             <TableBody>
               {isLoading ? (
                 // Loading skeleton
                 Array(pageSize).fill(0).map((_, index) => (
                   <TableRow key={`skeleton-${index}`}>
-                    {viewMode === 'default' && (
-                      <TableCell><Skeleton className="h-6 w-6" /></TableCell>
-                    )}
                     {Array(visibleColumns.length).fill(0).map((_, cellIndex) => (
                       <TableCell key={`skeleton-cell-${index}-${cellIndex}`}>
                         <Skeleton className="h-6 w-full" />
@@ -698,29 +572,10 @@ const SalesTable: React.FC<SalesTableProps> = ({ data, isLoading, refreshData })
                   </TableRow>
                 ))
               ) : Array.isArray(paginatedData) && paginatedData.length > 0 ? (
-                <>
-                  {paginatedData.map((item, index) => renderTableRow(item, index))}
-                  
-                  {/* Totals row at the bottom */}
-                  <TableRow className="totals-row">
-                    {viewMode === 'default' && <TableCell></TableCell>}
-                    {visibleColumns.map((col, idx) => (
-                      <TableCell 
-                        key={`bottom-total-${col}-${idx}`}
-                        className={col === 'Payment Value' ? 'text-right' : ''}
-                      >
-                        {col === 'Payment Value' 
-                          ? formatCurrency(totals.total)
-                          : col === 'Customer Name' 
-                            ? `Grand Total (${totals.count} transactions)`
-                            : ''}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                </>
+                paginatedData.map((item, index) => renderTableRow(item, index))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={visibleColumns.length + (viewMode === 'default' ? 1 : 0)} className="text-center py-8 text-gray-500">
+                  <TableCell colSpan={visibleColumns.length} className="text-center py-8 text-gray-500">
                     No transactions found
                   </TableCell>
                 </TableRow>
@@ -788,12 +643,12 @@ const SalesTable: React.FC<SalesTableProps> = ({ data, isLoading, refreshData })
           
           {detailedItem && (
             <div className="space-y-6">
-              <Tabs defaultValue="details" className="w-full">
-                <TabsList className="w-full mb-4 justify-start bg-gray-100 p-1 rounded-lg">
-                  <TabsTrigger value="details" className="data-[state=active]:bg-white data-[state=active]:text-primary">Details</TabsTrigger>
-                  <TabsTrigger value="customer" className="data-[state=active]:bg-white data-[state=active]:text-primary">Customer</TabsTrigger>
-                  <TabsTrigger value="payment" className="data-[state=active]:bg-white data-[state=active]:text-primary">Payment</TabsTrigger>
-                  <TabsTrigger value="product" className="data-[state=active]:bg-white data-[state=active]:text-primary">Product</TabsTrigger>
+              <Tabs defaultValue="details">
+                <TabsList className="mb-4">
+                  <TabsTrigger value="details">Details</TabsTrigger>
+                  <TabsTrigger value="customer">Customer</TabsTrigger>
+                  <TabsTrigger value="payment">Payment</TabsTrigger>
+                  <TabsTrigger value="product">Product</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="details" className="space-y-4">
@@ -842,7 +697,6 @@ const SalesTable: React.FC<SalesTableProps> = ({ data, isLoading, refreshData })
                   </div>
                 </TabsContent>
                 
-                {/* Other tabs content... */}
                 <TabsContent value="customer" className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-4">
