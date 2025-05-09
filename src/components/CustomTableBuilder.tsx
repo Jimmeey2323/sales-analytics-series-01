@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,6 +38,7 @@ import {
   TabsList,
   TabsTrigger
 } from "@/components/ui/tabs";
+import DateGrouping from './DateGrouping';
 
 interface CustomTableBuilderProps {
   salesData: SalesItem[];
@@ -81,6 +81,10 @@ const CustomTableBuilder: React.FC<CustomTableBuilderProps> = ({ salesData }) =>
   const [showSubtotals, setShowSubtotals] = useState<boolean>(true);
   const [groupBy, setGroupBy] = useState<keyof SalesItem | ''>('');
   
+  const [dateGroupedData, setDateGroupedData] = useState<Record<string, SalesItem[]>>({});
+  const [dateField, setDateField] = useState<keyof SalesItem | ''>('');
+  const [showDateGrouping, setShowDateGrouping] = useState(false);
+
   // Get all available fields from the first item
   React.useEffect(() => {
     if (salesData.length > 0) {
@@ -589,6 +593,42 @@ const CustomTableBuilder: React.FC<CustomTableBuilderProps> = ({ salesData }) =>
                 <div className="text-sm text-gray-500 mb-2">
                   {sortedData.length} items found
                 </div>
+                
+                <div className="mb-4">
+                  <label className="block text-sm mb-1">Date Field</label>
+                  <Select
+                    value={dateField as string}
+                    onValueChange={(value) => {
+                      setDateField(value === '' ? '' : value as keyof SalesItem);
+                      setShowDateGrouping(value !== '');
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select date field" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">None</SelectItem>
+                      {availableFields.filter(field => 
+                        field.toLowerCase().includes('date') || 
+                        field.toLowerCase().includes('time')
+                      ).map((field) => (
+                        <SelectItem key={field as string} value={field as string}>
+                          {field}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {showDateGrouping && dateField && (
+                  <div className="mb-4">
+                    <DateGrouping 
+                      data={filteredData} 
+                      dateField={dateField} 
+                      onGroupedData={setDateGroupedData} 
+                    />
+                  </div>
+                )}
                 
                 {/* Add more filters here */}
               </div>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,6 +7,8 @@ import MetricCard from './MetricCard';
 import SalesTable from './SalesTable';
 import SalesChart from './SalesChart';
 import FilterPanel from './FilterPanel';
+import ExpandableTable from './ExpandableTable';
+import EnhancedPerformance from './EnhancedPerformance';
 import {
   calculateSummary,
   filterDataByDateRange,
@@ -483,34 +484,81 @@ const Dashboard: React.FC = () => {
           <ExecutiveSummary salesSummary={salesSummary} />
         </TabsContent>
         
-        {/* Products Tab */}
-        <TabsContent value="products" className="m-0">
-          <CategoryAnalysis 
-            salesData={filteredData}
-            salesSummary={salesSummary}
-            fieldKey="Cleaned Product"
-            title="Product"
-          />
+        {/* Performance Tab */}
+        <TabsContent value="performace" className="m-0">
+          <EnhancedPerformance salesSummary={salesSummary} />
         </TabsContent>
         
-        {/* Categories Tab */}
+        {/* Add this for the Category Analysis with nested tree structure */}
         <TabsContent value="categories" className="m-0">
-          <CategoryAnalysis 
-            salesData={filteredData}
-            salesSummary={salesSummary}
-            fieldKey="Cleaned Category"
-            title="Category"
-          />
+          <div className="space-y-6">
+            <ExpandableTable 
+              data={filteredData}
+              groupByField="Cleaned Category"
+              columns={[
+                { key: "Cleaned Product", label: "Product" },
+                { key: "Customer Name", label: "Customer" },
+                { key: "Payment Date", label: "Date" },
+                { key: "Payment Value", label: "Amount" }
+              ]}
+              title="Categories Analysis"
+            />
+            
+            <CategoryAnalysis 
+              salesData={filteredData}
+              salesSummary={salesSummary}
+              fieldKey="Cleaned Category"
+              title="Category"
+            />
+          </div>
+        </TabsContent>
+        
+        {/* Products Tab */}
+        <TabsContent value="products" className="m-0">
+          <div className="space-y-6">
+            <ExpandableTable 
+              data={filteredData}
+              groupByField="Cleaned Product"
+              columns={[
+                { key: "Customer Name", label: "Customer" },
+                { key: "Payment Date", label: "Date" },
+                { key: "Payment Value", label: "Amount" },
+                { key: "Sold By", label: "Sold By" }
+              ]}
+              title="Products Analysis"
+            />
+            
+            <CategoryAnalysis 
+              salesData={filteredData}
+              salesSummary={salesSummary}
+              fieldKey="Cleaned Product"
+              title="Product"
+            />
+          </div>
         </TabsContent>
         
         {/* Associates Tab */}
         <TabsContent value="associates" className="m-0">
-          <CategoryAnalysis 
-            salesData={filteredData}
-            salesSummary={salesSummary}
-            fieldKey="Sold By"
-            title="Sales Associate"
-          />
+          <div className="space-y-6">
+            <ExpandableTable 
+              data={filteredData}
+              groupByField="Sold By"
+              columns={[
+                { key: "Cleaned Product", label: "Product" },
+                { key: "Customer Name", label: "Customer" },
+                { key: "Payment Date", label: "Date" },
+                { key: "Payment Value", label: "Amount" }
+              ]}
+              title="Sales Associate Analysis"
+            />
+            
+            <CategoryAnalysis 
+              salesData={filteredData}
+              salesSummary={salesSummary}
+              fieldKey="Sold By"
+              title="Sales Associate"
+            />
+          </div>
         </TabsContent>
         
         {/* Locations Tab */}
@@ -531,11 +579,6 @@ const Dashboard: React.FC = () => {
             fieldKey="Payment Method"
             title="Payment Method"
           />
-        </TabsContent>
-        
-        {/* Performance Tab */}
-        <TabsContent value="performace" className="m-0">
-          <TopPerformers salesSummary={salesSummary} />
         </TabsContent>
         
         {/* Transactions Tab */}
