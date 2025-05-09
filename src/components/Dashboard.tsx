@@ -205,8 +205,8 @@ const Dashboard: React.FC = () => {
     setFilters(newFilters);
   };
 
-  // Fix for the "always truthy" expression - line 343
-  const hasSearchQuery = searchQuery !== '';
+  // Fix for the "always truthy" expression
+  const hasSearchQuery = searchQuery.trim() !== '';
   
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">

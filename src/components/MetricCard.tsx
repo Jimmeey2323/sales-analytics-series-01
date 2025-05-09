@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import CounterAnimation from './CounterAnimation';
 import { Card } from '@/components/ui/card';
@@ -222,8 +223,6 @@ const MetricCard: React.FC<MetricCardProps> = ({
                   <div className="h-64">
                     <SalesChart 
                       data={detailsToChartData()} 
-                      chartType={chartVisible ? 'mini-chart' : 'hidden'}
-                      chartData={chartData}
                       title={title}
                       colors={['#4361ee', '#7209b7', '#f72585']}
                       description={`Distribution of ${title}`}
