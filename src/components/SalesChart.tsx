@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { ChartData } from '@/types/sales';
 import { 
@@ -394,9 +393,8 @@ const SalesChart: React.FC<SalesChartProps> = ({
             >
               <RadialBar
                 minAngle={15}
-                label={{ position: 'insideEnd', fill: '#333', fontSize: 11 }}
+                label={{ position: "insideEnd", fill: "#333", fontSize: 11 }}
                 background
-                clockWise={true}
                 dataKey="value"
                 animationDuration={1500}
               >
