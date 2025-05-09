@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   Table,
@@ -179,9 +180,9 @@ const CustomTableBuilder: React.FC<CustomTableBuilderProps> = ({ salesData }) =>
           case 'ends_with':
             return columnValue.toLowerCase().endsWith(filterValue.toLowerCase());
           case 'greater_than':
-            return parseFloat(columnValue) > parseFloat(filterValue);
+            return Number(columnValue) > Number(filterValue); // Fixed conversion issue
           case 'less_than':
-            return parseFloat(columnValue) < parseFloat(filterValue);
+            return Number(columnValue) < Number(filterValue); // Fixed conversion issue
           default:
             return true;
         }
@@ -262,7 +263,7 @@ const CustomTableBuilder: React.FC<CustomTableBuilderProps> = ({ salesData }) =>
         <div className="flex items-center gap-4">
           <Label htmlFor="rows-per-page">Rows per page:</Label>
           <Select value={String(pagination.pageSize)} onValueChange={(value) => handlePageSizeChange(Number(value))}>
-            <SelectTrigger id="rows-per-page">
+            <SelectTrigger aria-labelledby="rows-per-page">
               <SelectValue placeholder={String(pagination.pageSize)} />
             </SelectTrigger>
             <SelectContent>
@@ -384,7 +385,7 @@ const CustomTableBuilder: React.FC<CustomTableBuilderProps> = ({ salesData }) =>
             <div className="grid grid-cols-2 items-center gap-4">
               <Label htmlFor="column">Add Column</Label>
               <Select onValueChange={addColumn}>
-                <SelectTrigger id="column">
+                <SelectTrigger>
                   <SelectValue placeholder="Select a column" />
                 </SelectTrigger>
                 <SelectContent>
@@ -447,11 +448,10 @@ const CustomTableBuilder: React.FC<CustomTableBuilderProps> = ({ salesData }) =>
                 <div className="grid gap-2">
                   <Label htmlFor={`column-${index}`}>Column</Label>
                   <Select
-                    id={`column-${index}`}
                     value={filter.column}
                     onValueChange={(value) => updateFilter(filter.id, 'column', value)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger aria-labelledby={`column-${index}`}>
                       <SelectValue placeholder="Select column" />
                     </SelectTrigger>
                     <SelectContent>
@@ -466,11 +466,10 @@ const CustomTableBuilder: React.FC<CustomTableBuilderProps> = ({ salesData }) =>
                 <div className="grid gap-2">
                   <Label htmlFor={`operator-${index}`}>Operator</Label>
                   <Select
-                    id={`operator-${index}`}
                     value={filter.operator}
                     onValueChange={(value) => updateFilter(filter.id, 'operator', value)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger aria-labelledby={`operator-${index}`}>
                       <SelectValue placeholder="Select operator" />
                     </SelectTrigger>
                     <SelectContent>
