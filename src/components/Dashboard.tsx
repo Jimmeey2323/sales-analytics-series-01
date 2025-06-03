@@ -11,11 +11,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import sheetService from '@/services/sheetService';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
+import { calculateSummary } from '@/utils/salesUtils';
 
 const applyFilters = (data: SalesItem[], filters: Record<string, any>) => {
   let filteredData = [...data];
 
-  // Apply location filter - fix the truthy expression
+  // Apply location filter
   if (filters.locations && filters.locations.length > 0) {
     filteredData = filteredData.filter(item => filters.locations.includes(item["Calculated Location"]));
   }
@@ -123,6 +124,9 @@ const Dashboard = () => {
     setSearchQuery(query);
   };
 
+  // Calculate sales summary using the utility function
+  const salesSummary = calculateSummary(filteredData);
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
@@ -166,24 +170,7 @@ const Dashboard = () => {
         filters={filters}
       />
       
-      <ExecutiveSummary salesSummary={{
-        totalSales: filteredData.reduce((sum, item) => sum + parseFloat(item["Payment Value"] || "0"), 0),
-        totalTransactions: filteredData.length,
-        averageOrderValue: filteredData.length > 0 ? 
-          filteredData.reduce((sum, item) => sum + parseFloat(item["Payment Value"] || "0"), 0) / filteredData.length : 0,
-        totalProducts: [...new Set(filteredData.map(item => item["Cleaned Product"]))].length,
-        totalUniqueClients: [...new Set(filteredData.map(item => item["Member ID"]))].length,
-        revenueByCategory: {},
-        revenueByProduct: {},
-        salesByMethod: {},
-        salesByLocation: {},
-        salesByAssociate: {},
-        monthlyData: [],
-        dateRange: {
-          start: new Date(),
-          end: new Date()
-        }
-      }} />
+      <ExecutiveSummary salesSummary={salesSummary} />
       
       <SalesChart data={filteredData} isLoading={isLoading} />
 
@@ -205,24 +192,7 @@ const Dashboard = () => {
         
         <TabsContent value="categories">
           <CategoryAnalysis 
-            salesSummary={{
-              totalSales: filteredData.reduce((sum, item) => sum + parseFloat(item["Payment Value"] || "0"), 0),
-              totalTransactions: filteredData.length,
-              averageOrderValue: filteredData.length > 0 ? 
-                filteredData.reduce((sum, item) => sum + parseFloat(item["Payment Value"] || "0"), 0) / filteredData.length : 0,
-              totalProducts: [...new Set(filteredData.map(item => item["Cleaned Product"]))].length,
-              totalUniqueClients: [...new Set(filteredData.map(item => item["Member ID"]))].length,
-              revenueByCategory: {},
-              revenueByProduct: {},
-              salesByMethod: {},
-              salesByLocation: {},
-              salesByAssociate: {},
-              monthlyData: [],
-              dateRange: {
-                start: new Date(),
-                end: new Date()
-              }
-            }} 
+            salesSummary={salesSummary}
             salesData={filteredData}
             fieldKey="Cleaned Category"
             title="Category"
